@@ -3,13 +3,13 @@ title: "Lab2"
 author: "Tristen Tooming"
 date: "1/18/2021"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, comment = '')
 ```
 ### 1
 The data set Hitters, which can be obtained from the ISLR library, contains data with 322 observations of major league baseball players on 20 variables that are assumed to influence the salary of the players.
@@ -38,30 +38,79 @@ regfit.models <- regsubsets(Salary~., data = Hitters, nbest = 1, nvmax = ncol(Hi
 
 # Summary, Cp, BIC
 res.sum <- summary(regfit.models)
-as.data.frame(res.sum$outmat)
+# as.data.frame(res.sum$outmat)
 
 plot(regfit.models, scale='Cp')
 plot(regfit.models, scale='bic')
 
-cat(sprintf('Best Cp model: %s \n', which.min(res.sum$cp)))
-cat('Coeffs for the model 10: \n\n')
-coef(regfit.models, 10)
+`````
 
-cat('\n\n')
-cat(sprintf('Best BIC model: %s \n', which.min(res.sum$bic)))
-cat('Coeffs for the model 6: \n\n')
-coef(regfit.models, 6)
+```{r, echo=FALSE, results='hold'}
+regfit.sum.min.cp = which.min(res.sum$cp)
+cat(sprintf('Best Cp model: %s \n', regfit.sum.min.cp))
+cat(sprintf('Model: Salary ~ %s\n\n',
+        paste(names(which(res.sum$which[regfit.sum.min.cp, ] == TRUE)),
+              collapse = ' + ')))
+
+regfit.sum.min.bic = which.min(res.sum$bic)
+cat(sprintf('Best BIC model: %s \n', regfit.sum.min.bic))
+cat(sprintf('Model: Salary ~ %s\n\n',
+            paste(names(which(res.sum$which[regfit.sum.min.bic, ] == TRUE)),
+                  collapse = ' + ')))
 ```
+
+
 
 ##### Forward Stepwise Selection
 
 ```{r}
-regfit.fwd = regsubsets(Salary∼., data=Hitters, nvmax=ncol(Hitters), method ="forward ")
+regfit.fwd = regsubsets(Salary~., data=Hitters, nvmax=ncol(Hitters), method ="forward")
+
+regfit.fwd.sum = summary(regfit.fwd)
+
+regfit.fwd.sum.min.bic = which.min(regfit.fwd.sum$bic)
+regfit.fwd.sum.min.cp = which.min(regfit.fwd.sum$cp)
+
 ```
+```{r, echo=FALSE, results='hold'}
+cat(sprintf('\nBest Cp model: %s\n', regfit.fwd.sum.min.cp))
+cat(sprintf('Model: Salary ~ %s\n\n',
+            paste(names(which(regfit.fwd.sum$which[regfit.fwd.sum.min.cp, ] == TRUE)),
+                  collapse = ' + ')))
+
+cat(sprintf('Best BIC model: %s \n', regfit.fwd.sum.min.bic))
+cat(sprintf('Model: Salary ~ %s\n\n',
+            paste(names(which(regfit.fwd.sum$which[regfit.fwd.sum.min.bic, ] == TRUE)),
+                  collapse = ' + ')))
+```
+
 
 
 ##### Backward Stepwise Selection
 ```{r}
-regfit.bfd = regsubsets(Salary∼., data=Hitters, nvmax=ncol(Hitters), method ="forward ")
+regfit.bfd = regsubsets(Salary~., data=Hitters, nvmax=ncol(Hitters), method ="backward")
+regfit.bfd.sum = summary(regfit.bfd)
+
+regfit.bfd.sum.min.bic = which.min(regfit.bfd.sum$bic)
+regfit.bfd.sum.min.cp = which.min(regfit.bfd.sum$cp)
+
+```
+```{r, echo=FALSE, results='hold'}
+cat(sprintf('\nBest Cp model: %s \n', regfit.bfd.sum.min.cp))
+cat(sprintf('Model: Salary ~ %s\n\n',
+            paste(names(which(regfit.bfd.sum$which[regfit.bfd.sum.min.cp, ] == TRUE)),
+                  collapse = ' + ')))
+
+cat(sprintf('Best BIC model: %s \n', regfit.bfd.sum.min.bic))
+cat(sprintf('Model: Salary ~ %s\n\n',
+            paste(names(which(regfit.bfd.sum$which[regfit.bfd.sum.min.bic, ] == TRUE)),
+                  collapse = ' + ')))
+```
+
+##### Exercise 1. Conclusion 
+
+```{r, rows.print=20, echo=FALSE}
+full_model = lm(Salary ~ ., data = Hitters)
+as.data.frame(summary(full_model)$coefficients)
 ```
 
