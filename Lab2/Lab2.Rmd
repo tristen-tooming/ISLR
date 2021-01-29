@@ -125,6 +125,126 @@ Best Subset Selection and Forward Stepwise Selection perform simillary and they 
 
 Using p-values of the full model and just simply counting and concluding subset, forward and backwards results the most important variables are: PutOuts, Walks, Hits, AtBat, DivisionW, Cwalks, CRuns and AtBat. For improving model we could add interaction terms and perform model selection again. 
 
+### 2
+
+##### Pre
+```{r}
+library(caret)
+library(pls)
+library(caTools)
+library(MASS)
+library(tidyverse)
+
+tecator = read.csv("/Users/tuuba/code/ISRL/Lab2/tecator.csv")
+tecator_subset = tecator[ , !names(tecator) %in% c('Sample', 'Protein', 'Moisture')]
+
+set.seed(2707)
+smp_size <- floor(0.75 * nrow(tecator_subset))
+train_ind <- sample(seq_len(nrow(tecator_subset)), size = smp_size)
+tecator_train = tecator_subset[train_ind, ]
+tecator_test = tecator_subset[-train_ind, ]
+
+parcoord(tecator_subset)
+```
+> Conclusions: 
+
+```{r}
+model_pcr <- train(
+  Fat~., data = tecator_train, method = "pcr",
+  scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
+  trControl = trainControl("cv", number = 25),
+  tuneLength = 50
+  )
+# Plot model RMSE vs different values of components
+plot(model_pcr)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model_pcr$bestTune
+```
+```{r}
+model_pls <- train(
+  Fat~., data = tecator_train, method = "pls",
+  scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
+  trControl = trainControl("cv", number = 25),
+  tuneLength = 50
+  )
+# Plot model RMSE vs different values of components
+plot(model_pls)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model_pls$bestTune
+```
+```{r}
+# Predictions
+
+# Make predictions
+pcr_predictions <- model_pcr %>% predict(tecator_test)
+pls_predictions <- model_pls %>% predict(tecator_test)
+# Model performance metrics
+pcr_mse = caret::RMSE(pcr_predictions, tecator_test$Fat)**2
+pls_mse = caret::RMSE(pls_predictions, tecator_test$Fat)**2
+
+cat(sprintf("PCR MSE: %.2f\n", pcr_mse))
+cat(sprintf("PLS MSE: %.2f\n\n", pls_mse))
+```
+
+```{r}
+model_lasso <- train(
+  Fat~., data = tecator_train, method = "glmnet",
+  scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
+  trControl = trainControl("cv", number = 25),
+  tuneGrid = expand.grid(alpha = 1,  lambda = 0),
+  #tuneLength = 50
+  )
+# Plot model RMSE vs different values of components
+plot(model_lasso)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model_lasso$bestTune
+```
+
+```{r}
+model_ridge <- train(
+  Fat~., data = tecator_train, method = "glmnet",
+  scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
+  trControl = trainControl("cv", number = 25),
+  tuneGrid = expand.grid(alpha = 0,  lambda = 0),
+  tuneLength = 50
+  )
+# Plot model RMSE vs different values of components
+plot(model_ridge)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model_ridge$bestTune
+```
+
+The file contains data from 215 samples of finely chopped meat. Your task is to compare PCR, PLS, Lasso and Ridge regression in which the 
+fat content is regarded as target and the absorbance levels recorded in the 100 channels are regarded as explanatory variables.
+
+
+Perform Lasso and Ridge regression
+Use the same data as in the previous section to perform Lasso and Ridge regression where the regularization parameter should be tuned with 25-fold CV. Provide plots that show the CV-error as a function of the log of the regularization parameter for both methods. Find the regression coefficients and produce one plot per method. Extract the MSE for the best models and compare with the results from PCR and PLS. Which method performs best?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
