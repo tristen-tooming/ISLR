@@ -12,15 +12,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE, comment = '')
 ```
 ### 1
-The data set Hitters, which can be obtained from the ISLR library, contains data with 322 observations of major league baseball players on 20 variables that are assumed to influence the salary of the players.
 
-The purpose of this assignment is to compare the results of
-
-Best Subset Selection
-Forward Stepwise Selection
-Backward Stepwise Selection
-
-Use the leaps library and set up models with all variables as predictors and Salary as response. Find and present the best models based on both BIC and Cp. Which method performs best based on the lowest BIC and Cp, and which variables are important for the salary for this model?
+##### Pre
 
 ```{r}
 library(ISLR)
@@ -47,13 +40,17 @@ plot(regfit.models, scale='bic')
 
 ```{r, echo=FALSE, results='hold'}
 regfit.sum.min.cp = which.min(res.sum$cp)
-cat(sprintf('Best Cp model: %s \n', regfit.sum.min.cp))
+regfit.sum.min.cp.value = min(res.sum$cp)
+cat(sprintf('Best Cp (%.2f) model: %s \n', regfit.sum.min.cp.value, regfit.sum.min.cp))
 cat(sprintf('Model: Salary ~ %s\n\n',
         paste(names(which(res.sum$which[regfit.sum.min.cp, ] == TRUE)),
               collapse = ' + ')))
 
+
+
 regfit.sum.min.bic = which.min(res.sum$bic)
-cat(sprintf('Best BIC model: %s \n', regfit.sum.min.bic))
+regfit.sum.min.bic.value = min(res.sum$bic)
+cat(sprintf('Best BIC (%.2f) model: %s \n', regfit.sum.min.bic.value, regfit.sum.min.bic))
 cat(sprintf('Model: Salary ~ %s\n\n',
             paste(names(which(res.sum$which[regfit.sum.min.bic, ] == TRUE)),
                   collapse = ' + ')))
@@ -69,16 +66,19 @@ regfit.fwd = regsubsets(Salary~., data=Hitters, nvmax=ncol(Hitters), method ="fo
 regfit.fwd.sum = summary(regfit.fwd)
 
 regfit.fwd.sum.min.bic = which.min(regfit.fwd.sum$bic)
+regfit.fwd.sum.min.bic.value = min(regfit.fwd.sum$bic)
+
 regfit.fwd.sum.min.cp = which.min(regfit.fwd.sum$cp)
+regfit.fwd.sum.min.cp.value = min(regfit.fwd.sum$cp)
 
 ```
 ```{r, echo=FALSE, results='hold'}
-cat(sprintf('\nBest Cp model: %s\n', regfit.fwd.sum.min.cp))
+cat(sprintf('\nBest Cp (%.2f) model: %s\n', regfit.fwd.sum.min.cp.value, regfit.fwd.sum.min.cp))
 cat(sprintf('Model: Salary ~ %s\n\n',
             paste(names(which(regfit.fwd.sum$which[regfit.fwd.sum.min.cp, ] == TRUE)),
                   collapse = ' + ')))
 
-cat(sprintf('Best BIC model: %s \n', regfit.fwd.sum.min.bic))
+cat(sprintf('Best BIC (%.2f) model: %s \n', regfit.fwd.sum.min.bic.value, regfit.fwd.sum.min.bic))
 cat(sprintf('Model: Salary ~ %s\n\n',
             paste(names(which(regfit.fwd.sum$which[regfit.fwd.sum.min.bic, ] == TRUE)),
                   collapse = ' + ')))
@@ -92,16 +92,19 @@ regfit.bfd = regsubsets(Salary~., data=Hitters, nvmax=ncol(Hitters), method ="ba
 regfit.bfd.sum = summary(regfit.bfd)
 
 regfit.bfd.sum.min.bic = which.min(regfit.bfd.sum$bic)
+regfit.bfd.sum.min.bic.value = min(regfit.bfd.sum$bic)
+
 regfit.bfd.sum.min.cp = which.min(regfit.bfd.sum$cp)
+regfit.bfd.sum.min.cp.value = min(regfit.bfd.sum$cp)
 
 ```
 ```{r, echo=FALSE, results='hold'}
-cat(sprintf('\nBest Cp model: %s \n', regfit.bfd.sum.min.cp))
+cat(sprintf('\nBest Cp (%.2f) model: %s \n', regfit.bfd.sum.min.cp.value, regfit.bfd.sum.min.cp))
 cat(sprintf('Model: Salary ~ %s\n\n',
             paste(names(which(regfit.bfd.sum$which[regfit.bfd.sum.min.cp, ] == TRUE)),
                   collapse = ' + ')))
 
-cat(sprintf('Best BIC model: %s \n', regfit.bfd.sum.min.bic))
+cat(sprintf('Best BIC (%.2f) model: %s \n', regfit.bfd.sum.min.bic.value, regfit.bfd.sum.min.bic))
 cat(sprintf('Model: Salary ~ %s\n\n',
             paste(names(which(regfit.bfd.sum$which[regfit.bfd.sum.min.bic, ] == TRUE)),
                   collapse = ' + ')))
@@ -110,7 +113,19 @@ cat(sprintf('Model: Salary ~ %s\n\n',
 ##### Exercise 1. Conclusion 
 
 ```{r, rows.print=20, echo=FALSE}
+library(broom)
 full_model = lm(Salary ~ ., data = Hitters)
-as.data.frame(summary(full_model)$coefficients)
+coefs = tidy(full_model)
+coefs = coefs[order(coefs$p.value), ]
+knitr::kable(coefs, caption = 'Coeffs and their Significance (Sorted by P-value)', digits = 3)
 ```
+
+
+Best Subset Selection and Forward Stepwise Selection perform simillary and they give identical results. However selecting model based on BIC criteria Backward Stepwise Selection performs best with BIC value of -147.38 compared -147.92 when using Best Subset and Stepwise Forward methods. When using Cp-value as a comparison all methods gave identical models: Salary ~ (Intercept) + AtBat + Hits + Walks + CAtBat + CRuns + CRBI + CWalks + DivisionW + PutOuts + Assists with Cp-value of 5.01. 
+
+Using p-values of the full model and just simply counting and concluding subset, forward and backwards results the most important variables are: PutOuts, Walks, Hits, AtBat, DivisionW, Cwalks, CRuns and AtBat. For improving model we could add interaction terms and perform model selection again. 
+
+
+
+
 
