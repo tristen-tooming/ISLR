@@ -9,22 +9,62 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+###Assignment 1: Analysis of mortality rates using splines
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+##### Pre
+```{r}
+mortality_rate = read.csv('mortality_rate.csv', header = TRUE, sep = ';')
+summary(mortality_rate$Rate)
 ```
 
-## Including Plots
+##### 1.a.
 
-You can also embed plots, for example:
+```{r}
+mortality_rate$lmr = log(mortality_rate$Rate)
+plot(mortality_rate$Day, mortality_rate$lmr,
+     ylab = 'LMR',
+     xlab = 'Day',
+     main = 'Log-Mortality-Rate (LMR)')
+```
+> Plot looks a little bit scrappy and you cannot see a solid 'line' to indicate that data follows an exponential mortality rate. 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+1.b. Fit natural cubic splines using the ns() function in package splines() (LMR as response variable and Day as predictor variable). Fit four models with 1, 2, 15 and 50 knots. Produce four plots with data points, predicted lines and their knots. Use all the data points to calculate the mean squared error (MSE). Which number of knots seems to give the most reasonable fit based on MSE?
+
+```{r}
+library(splines)
+
+fit_ns_1 = lm(lmr ~ ns(Day, df = 2), data = mortality_rate)
+pred1 = predict(fit_ns_1, newdata = list(Day=mortality_rate$Day))
+
+fit_ns_2 = lm(lmr ~ ns(Day, df = 3), data = mortality_rate)
+pred2 = predict(fit_ns_2, newdata = list(Day=mortality_rate$Day))
+
+fit_ns_15 = lm(lmr ~ ns(Day, df = 16), data = mortality_rate)
+pred3 = predict(fit_ns_15, newdata = list(Day=mortality_rate$Day))
+
+fit_ns_50 = lm(lmr ~ ns(Day, df = 51), data = mortality_rate)
+pred4 = predict(fit_ns_50, newdata = list(Day=mortality_rate$Day))
+
+
+plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR', pch=16,
+     main = 'Natural cubic splies fit')
+lines(mortality_rate$Day, pred1, col='black', lwd = 2)
+points(attr(ns(mortality_rate$Day, df = 2), "knots"),
+  predict(fit_ns_1, 
+  data.frame(x = attr(ns(x, df = 2), 
+  "knots"))),
+  col="black",pch=15)
+
+lines(mortality_rate$Day, pred2, col='blue', lwd = 2)
+lines(mortality_rate$Day, pred3, col='green', lwd = 2)
+lines(mortality_rate$Day, pred4, col='red', lwd = 2)
+
+legend(1, 0, legend=c(1, 2, 15, 50),
+       col=c('black', 'blue', 'green', 'red'), lwd = 2, cex=0.8)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+1.c. The next task is to divide the data into 70% training and 30% test partitions. Use the sample.int() function to partition the original data into 95 train and 41 test data samples. Fit the models to the train data and perform the predictions on the test data. Calculate MSE based on the difference between the real test data and the predicted test data. Repeat 10 times (i.e. create 10 different training and test data) and calculate the mean MSE. Compare the results with these obtained in 1.b.
+
+1.d. The final task of this assignment is to fit smoothing splines using the smooth.spline() function in R. Use generalized cross-validation to find the optimal degree of smoothing on each of the training data. Provide a plot of the data points and fitted spline curve for the first training data. Also, present the average of the estimated effective degrees of freedom and the smoothing parameter λ, as well as the number of proper knots. Compare the average predicted MSE with the best MSE from 1.c.
