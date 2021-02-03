@@ -40,28 +40,50 @@ pred1 = predict(fit_ns_1, newdata = list(Day=mortality_rate$Day))
 fit_ns_2 = lm(lmr ~ ns(Day, df = 3), data = mortality_rate)
 pred2 = predict(fit_ns_2, newdata = list(Day=mortality_rate$Day))
 
-fit_ns_15 = lm(lmr ~ ns(Day, df = 16), data = mortality_rate)
+fit_ns_3 = lm(lmr ~ ns(Day, df = 16), data = mortality_rate)
 pred3 = predict(fit_ns_15, newdata = list(Day=mortality_rate$Day))
 
-fit_ns_50 = lm(lmr ~ ns(Day, df = 51), data = mortality_rate)
+fit_ns_4 = lm(lmr ~ ns(Day, df = 51), data = mortality_rate)
 pred4 = predict(fit_ns_50, newdata = list(Day=mortality_rate$Day))
 
 
-plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR', pch=16,
-     main = 'Natural cubic splies fit')
+
+plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
+     main = 'Natural cubic splies fit #1')
 lines(mortality_rate$Day, pred1, col='black', lwd = 2)
 points(attr(ns(mortality_rate$Day, df = 2), "knots"),
-  predict(fit_ns_1, 
-  data.frame(x = attr(ns(x, df = 2), 
-  "knots"))),
-  col="black",pch=15)
+  predict(fit_ns_1,
+          data.frame(Day = attr(ns(mortality_rate$Day, df = 2), "knots"))),
+  col="black",pch=4, lwd = 3, cex = 1)
 
+plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
+     main = 'Natural cubic splies fit #2')
 lines(mortality_rate$Day, pred2, col='blue', lwd = 2)
-lines(mortality_rate$Day, pred3, col='green', lwd = 2)
-lines(mortality_rate$Day, pred4, col='red', lwd = 2)
+points(attr(ns(mortality_rate$Day, df = 3), "knots"),
+  predict(fit_ns_2,
+          data.frame(Day = attr(ns(mortality_rate$Day, df = 3), "knots"))),
+  col="blue",pch=4, lwd = 3, cex = 1)
 
-legend(1, 0, legend=c(1, 2, 15, 50),
-       col=c('black', 'blue', 'green', 'red'), lwd = 2, cex=0.8)
+plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
+     main = 'Natural cubic splies fit #3')
+lines(mortality_rate$Day, pred3, col='green', lwd = 2)
+points(attr(ns(mortality_rate$Day, df = 16), "knots"),
+  predict(fit_ns_2,
+          data.frame(Day = attr(ns(mortality_rate$Day, df = 16), "knots"))),
+  col="green",pch=4, lwd = 3, cex = 1)
+
+plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
+     main = 'Natural cubic splies fit #3')
+lines(mortality_rate$Day, pred4, col='red', lwd = 2)
+points(attr(ns(mortality_rate$Day, df = 51), "knots"),
+  predict(fit_ns_2,
+          data.frame(Day = attr(ns(mortality_rate$Day, df = 51), "knots"))),
+  col="red",pch=4, lwd = 3, cex = 1)
+
+```
+```{r}
+
+
 ```
 
 
