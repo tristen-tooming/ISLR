@@ -80,7 +80,14 @@ points(attr(ns(mortality_rate$Day, df = 51), "knots"),
           data.frame(Day = attr(ns(mortality_rate$Day, df = 51), "knots"))),
   col="red",pch=4, lwd = 3, cex = 1)
 
+
+for (i in 1:4) {
+  cat(sprintf("Model #%s MSE: %.2f \n", i,
+              mean(eval(as.name(paste(c('fit_ns_', i), collapse = '')))$residuals^2)))  
+}
 ```
+> Based on MSE model number four performs best. However with that many knots it can lead to overfit of the model. Model number three or even number two could be better choices. Needs more testing/validation.
+
 ```{r}
 
 
