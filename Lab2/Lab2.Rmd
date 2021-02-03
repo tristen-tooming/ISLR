@@ -128,13 +128,16 @@ Using p-values of the full model and just simply counting and concluding subset,
 ### 2
 
 ##### Pre
-```{r}
+
+```{r, echo = FALSE, echo=F}
 library(caret)
 library(pls)
 library(caTools)
 library(MASS)
 library(tidyverse)
+```
 
+```{r}
 tecator = read.csv("/Users/tuuba/code/ISRL/Lab2/tecator.csv")
 tecator_subset = tecator[ , !names(tecator) %in% c('Sample', 'Protein', 'Moisture')]
 
@@ -146,7 +149,7 @@ tecator_test = tecator_subset[-train_ind, ]
 
 parcoord(tecator_subset)
 ```
-> Conclusions: 
+> Conclusion: The straight lines indicate good linear relationships so on PCR, PLS, Lasso and Ridge ression could be suitable to model the data.
 
 ```{r}
 model_pcr <- train(
@@ -156,7 +159,7 @@ model_pcr <- train(
   tuneLength = 50
   )
 # Plot model RMSE vs different values of components
-plot(model_pcr)
+plot(model_pcr, main = 'Performance of PCR')
 # Print the best tuning parameter ncomp that
 # minimize the cross-validation error, RMSE
 model_pcr$bestTune
@@ -169,7 +172,7 @@ model_pls <- train(
   tuneLength = 50
   )
 # Plot model RMSE vs different values of components
-plot(model_pls)
+plot(model_pls, main = 'Performance of PLS')
 # Print the best tuning parameter ncomp that
 # minimize the cross-validation error, RMSE
 model_pls$bestTune
@@ -184,46 +187,49 @@ pls_predictions <- model_pls %>% predict(tecator_test)
 pcr_mse = caret::RMSE(pcr_predictions, tecator_test$Fat)**2
 pls_mse = caret::RMSE(pls_predictions, tecator_test$Fat)**2
 
-cat(sprintf("PCR MSE: %.2f\n", pcr_mse))
-cat(sprintf("PLS MSE: %.2f\n\n", pls_mse))
 ```
 
-```{r}
+```{r, warning=FALSE}
+# Regularization parameters
+parameters <- c(seq(0.1, 2, by =0.1) ,  seq(2, 5, 0.5) , seq(5, 25, 1))
+
 model_lasso <- train(
   Fat~., data = tecator_train, method = "glmnet",
   scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
   trControl = trainControl("cv", number = 25),
-  tuneGrid = expand.grid(alpha = 1,  lambda = 0),
-  #tuneLength = 50
+  tuneGrid = expand.grid(alpha = 1,  lambda = parameters),
+  metris = 'RMSE'
   )
-# Plot model RMSE vs different values of components
-plot(model_lasso)
-# Print the best tuning parameter ncomp that
-# minimize the cross-validation error, RMSE
-model_lasso$bestTune
-```
 
-```{r}
 model_ridge <- train(
   Fat~., data = tecator_train, method = "glmnet",
   scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
   trControl = trainControl("cv", number = 25),
-  tuneGrid = expand.grid(alpha = 0,  lambda = 0),
-  tuneLength = 50
+  tuneGrid = expand.grid(alpha = 0,  lambda = parameters),
+  metric = 'RMSE'
   )
-# Plot model RMSE vs different values of components
-plot(model_ridge)
-# Print the best tuning parameter ncomp that
-# minimize the cross-validation error, RMSE
-model_ridge$bestTune
+
+plot(model_lasso, main = 'Performance of Lasso')
+plot(model_ridge, main = 'Performance of Ridge')
+
+# Predictions 
+lasso_predictions <- model_lasso %>% predict(tecator_test)
+ridge_predictions <- model_ridge %>% predict(tecator_test)
+
+# Model performance metrics
+lasso_mse = caret::RMSE(lasso_predictions, tecator_test$Fat)**2
+ridge_mse = caret::RMSE(ridge_predictions, tecator_test$Fat)**2
+```
+```{r, echo=FALSE, results='hold'}
+cat(sprintf("PCR MSE: %.2f\n", pcr_mse))
+cat(sprintf("PLS MSE: %.2f\n", pls_mse))
+cat(sprintf("Lasso MSE: %.2f\n", lasso_mse))
+cat(sprintf("Ridge MSE: %.2f\n\n", ridge_mse))
 ```
 
-The file contains data from 215 samples of finely chopped meat. Your task is to compare PCR, PLS, Lasso and Ridge regression in which the 
-fat content is regarded as target and the absorbance levels recorded in the 100 channels are regarded as explanatory variables.
+PLS has the best performance with MSE of 3.92, then comes PCR (MSE = 4.70), Lasso (MSE = 12.42) and lastly Ridge (MSE = 17.30). 
 
 
-Perform Lasso and Ridge regression
-Use the same data as in the previous section to perform Lasso and Ridge regression where the regularization parameter should be tuned with 25-fold CV. Provide plots that show the CV-error as a function of the log of the regularization parameter for both methods. Find the regression coefficients and produce one plot per method. Extract the MSE for the best models and compare with the results from PCR and PLS. Which method performs best?
 
 
 
