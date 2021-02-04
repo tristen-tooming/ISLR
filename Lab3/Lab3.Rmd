@@ -49,7 +49,7 @@ pred4 = predict(fit_ns_50, newdata = list(Day=mortality_rate$Day))
 
 
 plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
-     main = 'Natural cubic splies fit #1')
+     main = 'Natural cubic splies fit #1 (knots = 1)')
 lines(mortality_rate$Day, pred1, col='black', lwd = 2)
 points(attr(ns(mortality_rate$Day, df = 2), "knots"),
   predict(fit_ns_1,
@@ -57,7 +57,7 @@ points(attr(ns(mortality_rate$Day, df = 2), "knots"),
   col="black",pch=4, lwd = 3, cex = 1)
 
 plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
-     main = 'Natural cubic splies fit #2')
+     main = 'Natural cubic splies fit #2 (knots = 2)')
 lines(mortality_rate$Day, pred2, col='blue', lwd = 2)
 points(attr(ns(mortality_rate$Day, df = 3), "knots"),
   predict(fit_ns_2,
@@ -65,7 +65,7 @@ points(attr(ns(mortality_rate$Day, df = 3), "knots"),
   col="blue",pch=4, lwd = 3, cex = 1)
 
 plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
-     main = 'Natural cubic splies fit #3')
+     main = 'Natural cubic splies fit #3 (knots = 15)')
 lines(mortality_rate$Day, pred3, col='green', lwd = 2)
 points(attr(ns(mortality_rate$Day, df = 16), "knots"),
   predict(fit_ns_2,
@@ -73,7 +73,7 @@ points(attr(ns(mortality_rate$Day, df = 16), "knots"),
   col="green",pch=4, lwd = 3, cex = 1)
 
 plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
-     main = 'Natural cubic splies fit #3')
+     main = 'Natural cubic splies fit #4 (knots = 50)')
 lines(mortality_rate$Day, pred4, col='red', lwd = 2)
 points(attr(ns(mortality_rate$Day, df = 51), "knots"),
   predict(fit_ns_2,
@@ -88,12 +88,105 @@ for (i in 1:4) {
 ```
 > Based on MSE model number four performs best. However with that many knots it can lead to overfit of the model. Model number three or even number two could be better choices. Needs more testing/validation.
 
+##### 1.c
+```{r, warning=F}
+
+# Splitting data function
+make_sample = function(data, seed_num, train_size) {
+  set.seed(seed_num)
+  smp_size <- floor(train_size * nrow(mtcars))
+  train_ind <- sample(seq_len(nrow(mtcars)), size = smp_size)
+  
+  return_list = vector(mode="list", length=2)
+  names(return_list) = c('train', 'test')
+  
+  train <- mortality_rate[train_ind, ]
+  test <- mortality_rate[-train_ind, ]
+  
+  return_list[[1]] = train
+  return_list[[2]] = test
+  
+  return(return_list)
+}
+
+# Calc MSE
+calc_mse = function(actual, pred) {
+  return(mean(actual - pred)**2)
+}
+
+
+
+test = function(data, nknots) {
+  mse_data = data.frame(matrix(nrow = 0, ncol = 4))
+  
+  # Column names based on the knots
+  cnames = c()
+  cnames_mse = c()
+  for (x in 1:length(nknots)) {
+    cnames[x] = paste(c('nkonts_', nknots[x]), collapse ='')
+    cnames_mse[x]= paste(c('MSE_of_nkonts_', nknots[x]), collapse ='')
+  }
+  colnames(mse_data) = cnames
+  
+  
+  # Fitting and data splitting
+  for (i in 1:10) {
+    model_data = make_sample(data, 123 + i, 0.7)
+  
+    train = model_data$train
+    test = model_data$test
+      
+    row_name = paste(c('MSE_', i), collapse = '')
+    
+    for (j in 1:length(nknots)) {
+      fit = lm(lmr ~ ns(Day, df = nknots[j] + 1), data = train) # Hardcoded
+      pred = predict(fit, test)
+      
+      # Warning: prediction from a rank-deficient fit may be misleading
+      
+      # A matrix that does not have "full rank" is said to be "rank deficient".
+      # A matrix is said to have full rank if its rank is either equal to its
+      # number of columns or to its number of rows (or to both).
+      
+      mse_data[i, j] = calc_mse(test$lmr, pred)
+    }
+  }
+
+  
+  # Return data
+  return_data = vector(mode="list", length=5)
+  
+  names(return_data) = c('MSE_data', cnames_mse)
+  
+  return_data$MSE_data = mse_data
+  for (c in 1:ncol(mse_data)) {
+    return_data[c + 1] = mean(mse_data[, c])
+  }
+  
+  return(return_data)
+}
+
+
+print(test(mortality_rate, nknots=c(1, 2, 15, 50)))
+
+```
+> Compared to 1 b MSEs are considerably higher. With this seed best MSE (1.56) is from model with fifthteen knots. Model with fifty knots gives absurd MSE.
+
+##### 1.d. The final task of this assignment is to fit smoothing splines using the smooth.spline() function in R. Use generalized cross-validation to find the optimal degree of smoothing on each of the training data. Provide a plot of the data points and fitted spline curve for the first training data. Also, present the average of the estimated effective degrees of freedom and the smoothing parameter λ, as well as the number of proper knots. Compare the average predicted MSE with the best MSE from 1.c.
+
 ```{r}
+data = make_sample(mortality_rate, 2707, 0.7)
+
+train = data$train
+test = data$test
+
+smooth <- smooth.spline(x=train$Day, y=train$lmr, cv = T)
+pred = stats:::predict.smooth.spline(smooth, test$Day)
+
+cat(sprintf('MSE of the best lambda: %.2g \n', calc_mse(test$lmr, pred$y)))
+cat(sprintf('Lambda: %.2g \n', smooth$lambda))  #Smoothing parameter
+cat(sprintf('Number of Knots: %s \n', smooth$fit$nk))
 
 
 ```
 
-
-1.c. The next task is to divide the data into 70% training and 30% test partitions. Use the sample.int() function to partition the original data into 95 train and 41 test data samples. Fit the models to the train data and perform the predictions on the test data. Calculate MSE based on the difference between the real test data and the predicted test data. Repeat 10 times (i.e. create 10 different training and test data) and calculate the mean MSE. Compare the results with these obtained in 1.b.
-
-1.d. The final task of this assignment is to fit smoothing splines using the smooth.spline() function in R. Use generalized cross-validation to find the optimal degree of smoothing on each of the training data. Provide a plot of the data points and fitted spline curve for the first training data. Also, present the average of the estimated effective degrees of freedom and the smoothing parameter λ, as well as the number of proper knots. Compare the average predicted MSE with the best MSE from 1.c.
