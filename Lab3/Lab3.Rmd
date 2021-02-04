@@ -186,7 +186,8 @@ pred = stats:::predict.smooth.spline(smooth, test$Day)
 cat(sprintf('MSE of the best lambda: %.2g \n', calc_mse(test$lmr, pred$y)))
 cat(sprintf('Lambda: %.2g \n', smooth$lambda))  #Smoothing parameter
 cat(sprintf('Number of Knots: %s \n', smooth$fit$nk))
+cat(sprintf('Avarage of the effective Degrees of Freedom: %.3g \n', smooth$df - 2))
 
 
 ```
-
+> Smoothing splines performs effectively comprored to natural cubic splines with MSE of 0.055 and difference to best cubic models MSE is (1.555 - 0.055) 1.05.
