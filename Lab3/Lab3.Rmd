@@ -27,9 +27,10 @@ plot(mortality_rate$Day, mortality_rate$lmr,
      xlab = 'Day',
      main = 'Log-Mortality-Rate (LMR)')
 ```
+<br>
 > Plot looks a little bit scrappy and you cannot see a solid 'line' to indicate that data follows an exponential mortality rate. 
 
-1.b. Fit natural cubic splines using the ns() function in package splines() (LMR as response variable and Day as predictor variable). Fit four models with 1, 2, 15 and 50 knots. Produce four plots with data points, predicted lines and their knots. Use all the data points to calculate the mean squared error (MSE). Which number of knots seems to give the most reasonable fit based on MSE?
+###### 1.b
 
 ```{r}
 library(splines)
@@ -45,9 +46,10 @@ pred3 = predict(fit_ns_3, newdata = list(Day=mortality_rate$Day))
 
 fit_ns_4 = lm(lmr ~ ns(Day, df = 51), data = mortality_rate)
 pred4 = predict(fit_ns_4, newdata = list(Day=mortality_rate$Day))
+```
 
 
-
+```{r, echo=F}
 plot(mortality_rate$Day, mortality_rate$lmr, xlab = 'Day', ylab = 'LMR',
      main = 'Natural cubic splies fit #1 (knots = 1)')
 lines(mortality_rate$Day, pred1, col='black', lwd = 2)
@@ -86,7 +88,7 @@ for (i in 1:4) {
               mean(eval(as.name(paste(c('fit_ns_', i), collapse = '')))$residuals^2)))  
 }
 ```
-> Based on MSE model number four performs best. However with that many knots it can lead to overfit of the model. Model number three or even number two could be better choices. Needs more testing/validation.
+<br>> Based on MSE model number four performs best. However with that many knots it can lead to overfit of the model. Model number three or even number two could be better choices. Needs more testing/validation.
 
 ##### 1.c
 ```{r, warning=F}
@@ -170,6 +172,7 @@ test = function(data, nknots) {
 print(test(mortality_rate, nknots=c(1, 2, 15, 50)))
 
 ```
+<br>
 > Compared to 1 b MSEs are considerably higher. With this seed best MSE (1.56) is from model with fifthteen knots. Model with fifty knots gives absurd MSE.
 
 ##### 1.d. The final task of this assignment is to fit smoothing splines using the smooth.spline() function in R. Use generalized cross-validation to find the optimal degree of smoothing on each of the training data. Provide a plot of the data points and fitted spline curve for the first training data. Also, present the average of the estimated effective degrees of freedom and the smoothing parameter λ, as well as the number of proper knots. Compare the average predicted MSE with the best MSE from 1.c.
@@ -190,6 +193,7 @@ cat(sprintf('Avarage of the effective Degrees of Freedom: %.3g \n', smooth$df - 
 
 
 ```
+<br>
 > Smoothing splines performs effectively comprored to natural cubic splines with MSE of 0.055 and difference to best cubic models MSE is (1.555 - 0.055) 1.05.
 
 
@@ -208,7 +212,7 @@ auto_mpg = auto_mpg[ , !(names(auto_mpg) %in% 'name')]
 summary(auto_mpg)
 ```
 
-```{r}
+```{r, cache=TRUE}
 # 2.a. Set up a lasso model (option ‘glmnet’) for all data with the train()
 # function in the caret and use LOOCV to find the RMSE.
 # In order to tune the alpha and lambda parameters, set the tuneLength = 50.
@@ -231,9 +235,10 @@ fit_lasso = train(mpg ~.,
 getTrainPerf(fit_lasso)[1]
 
 ```
+<br>
 > How I can get the best model? fit_lasso$finalModel gives strange output
 
-```{r}
+```{r, cache=TRUE}
 # 2.b. Set up a GAM model with spline basis functions for all data
 # with the train() function in the caret package and use LOOCV to find the best RMSE.
 # Find a reasonable interval for the tuning parameter df. Present the table
@@ -246,12 +251,16 @@ fit_gam_spline <- train(
   scale = FALSE,
   trControl = trainControl("LOOCV", number = 1),
   tuneGrid = expand.grid(df = seq(1, 9, length = 9)))
-
+```
+```{r}
 fit_gam_spline
+#summary(fit_gam_spline$finalModel)
+cat(sprintf('Best model RMSE: %.4g', min(fit_gam_spline$results$RMSE)))
 ```
 
 
-```{r}
+##### 2.c
+```{r, warning=F, cache=TRUE}
 # 2.c. Set up a GAM model with loess basis functions for all data with the train()
 # function in the caret package and use LOOCV to find the RMSE. Find a reasonable
 # interval for the tuning parameter span and fix degree to 1.
@@ -262,12 +271,25 @@ fit_gam_loess <- train(
   mpg~., data = auto_mpg, method = "gamLoess",
   scale = FALSE,
   trControl = trainControl("LOOCV", number = 1),
-  tuneGrid = expand.grid(df = seq(1, 9, length = 9)))
-
+  tuneGrid = expand.grid(span = seq(0.1, 0.5, length = 9),
+                         degree = c(rep(1,9))))
+```
+```{r}
 fit_gam_loess
+cat(sprintf('RMSE: %.4g', min(fit_gam_loess$results$RMSE)))
 ```
 
 
-2.d. Present a plot of the regression coefficient/curves for the method that performed best.
+##### 2.d. Best Model
+
+```{r, results='hold'}
+# Present a plot of the regression coefficient/curves for the method that performed best.
+
+# Best model is Generalized Additive Model using Splines 
+
+par(mfrow = c(3,4))
+plot(fit_gam_spline$finalModel)
+
+```
 
 

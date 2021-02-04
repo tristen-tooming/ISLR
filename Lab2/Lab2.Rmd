@@ -198,7 +198,7 @@ model_lasso <- train(
   scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
   trControl = trainControl("cv", number = 25),
   tuneGrid = expand.grid(alpha = 1,  lambda = parameters),
-  metris = 'RMSE'
+  metric = 'RMSE'
   )
 
 model_ridge <- train(
