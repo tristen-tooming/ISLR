@@ -41,10 +41,10 @@ fit_ns_2 = lm(lmr ~ ns(Day, df = 3), data = mortality_rate)
 pred2 = predict(fit_ns_2, newdata = list(Day=mortality_rate$Day))
 
 fit_ns_3 = lm(lmr ~ ns(Day, df = 16), data = mortality_rate)
-pred3 = predict(fit_ns_15, newdata = list(Day=mortality_rate$Day))
+pred3 = predict(fit_ns_3, newdata = list(Day=mortality_rate$Day))
 
 fit_ns_4 = lm(lmr ~ ns(Day, df = 51), data = mortality_rate)
-pred4 = predict(fit_ns_50, newdata = list(Day=mortality_rate$Day))
+pred4 = predict(fit_ns_4, newdata = list(Day=mortality_rate$Day))
 
 
 
@@ -191,3 +191,83 @@ cat(sprintf('Avarage of the effective Degrees of Freedom: %.3g \n', smooth$df - 
 
 ```
 > Smoothing splines performs effectively comprored to natural cubic splines with MSE of 0.055 and difference to best cubic models MSE is (1.555 - 0.055) 1.05.
+
+
+### Assignment 2: Comparison of GAMs with spline and loess basis functions
+
+##### Pre
+
+```{r}
+auto_mpg = read.table('auto-mpg.txt', header = T)
+
+auto_mpg$year = factor(auto_mpg$year)
+auto_mpg$origin = factor(auto_mpg$origin)
+
+auto_mpg = auto_mpg[ , !(names(auto_mpg) %in% 'name')]
+
+summary(auto_mpg)
+```
+
+```{r}
+# 2.a. Set up a lasso model (option ‘glmnet’) for all data with the train()
+# function in the caret and use LOOCV to find the RMSE.
+# In order to tune the alpha and lambda parameters, set the tuneLength = 50.
+# Present the best model (not all) and its model fit criteria.
+
+library(caret)
+
+tuneGrid <- expand.grid(alpha = 1, lambda = seq(0.0001, 1, length = 50))
+
+fit_lasso = train(mpg ~.,
+                  data = auto_mpg,
+                  method = "glmnet",
+                  tuneGrid = tuneGrid,
+                  tuneLength = 50,
+                  trControl = trainControl("LOOCV", number = 1))
+
+
+# Does not work
+#fit_lasso$finalModel
+getTrainPerf(fit_lasso)[1]
+
+```
+> How I can get the best model? fit_lasso$finalModel gives strange output
+
+```{r}
+# 2.b. Set up a GAM model with spline basis functions for all data
+# with the train() function in the caret package and use LOOCV to find the best RMSE.
+# Find a reasonable interval for the tuning parameter df. Present the table
+# of the evaluated models and their model fit criteria.
+
+library(gam)
+# Build the GAM model based on splines and find best model with LOOCV
+fit_gam_spline <- train(
+  mpg~., data = auto_mpg, method = "gamSpline",
+  scale = FALSE,
+  trControl = trainControl("LOOCV", number = 1),
+  tuneGrid = expand.grid(df = seq(1, 9, length = 9)))
+
+fit_gam_spline
+```
+
+
+```{r}
+# 2.c. Set up a GAM model with loess basis functions for all data with the train()
+# function in the caret package and use LOOCV to find the RMSE. Find a reasonable
+# interval for the tuning parameter span and fix degree to 1.
+# Present the table of the evaluated models and their model fit criteria.
+
+# Build the GAM model based on splines and find best model with LOOCV
+fit_gam_loess <- train(
+  mpg~., data = auto_mpg, method = "gamLoess",
+  scale = FALSE,
+  trControl = trainControl("LOOCV", number = 1),
+  tuneGrid = expand.grid(df = seq(1, 9, length = 9)))
+
+fit_gam_loess
+```
+
+
+2.d. Present a plot of the regression coefficient/curves for the method that performed best.
+
+
