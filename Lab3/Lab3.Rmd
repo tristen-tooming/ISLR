@@ -93,27 +93,9 @@ for (i in 1:4) {
 ##### 1.c
 ```{r, warning=F}
 
-# Splitting data function
-make_sample = function(data, seed_num, train_size) {
-  set.seed(seed_num)
-  smp_size <- floor(train_size * nrow(mtcars))
-  train_ind <- sample(seq_len(nrow(mtcars)), size = smp_size)
-  
-  return_list = vector(mode="list", length=2)
-  names(return_list) = c('train', 'test')
-  
-  train <- mortality_rate[train_ind, ]
-  test <- mortality_rate[-train_ind, ]
-  
-  return_list[[1]] = train
-  return_list[[2]] = test
-  
-  return(return_list)
-}
-
 # Calc MSE
 calc_mse = function(actual, pred) {
-  return(mean(actual - pred)**2)
+  return(mean((actual - pred) ** 2))
 }
 
 
@@ -133,24 +115,23 @@ test = function(data, nknots) {
   
   # Fitting and data splitting
   for (i in 1:10) {
-    model_data = make_sample(data, 123 + i, 0.7)
-  
-    train = model_data$train
-    test = model_data$test
-      
-    row_name = paste(c('MSE_', i), collapse = '')
-    
+    set.seed(2707 + i)
+    smp_size <- floor(0.7 * nrow(data))
+    train_ind <- sample(seq_len(nrow(data)), size = smp_size)
+
+    train <- data[train_ind, ]
+    test <- data[-train_ind, ]
+
     for (j in 1:length(nknots)) {
-      fit = lm(lmr ~ ns(Day, df = nknots[j] + 1), data = train) # Hardcoded
-      pred = predict(fit, test)
+      fit = lm(lmr ~ ns(Day, df = nknots[j] + 1), data = train)
+      pred_lmr = predict(fit, newdata=list(Day=test$Day))
       
       # Warning: prediction from a rank-deficient fit may be misleading
       
       # A matrix that does not have "full rank" is said to be "rank deficient".
       # A matrix is said to have full rank if its rank is either equal to its
       # number of columns or to its number of rows (or to both).
-      
-      mse_data[i, j] = calc_mse(test$lmr, pred)
+      mse_data[i, j] = calc_mse(test$lmr, pred_lmr)
     }
   }
 
@@ -175,26 +156,20 @@ print(test(mortality_rate, nknots=c(1, 2, 15, 50)))
 <br>
 > Compared to 1 b MSEs are considerably higher. With this seed best MSE (1.56) is from model with fifthteen knots. Model with fifty knots gives absurd MSE.
 
-##### 1.d. The final task of this assignment is to fit smoothing splines using the smooth.spline() function in R. Use generalized cross-validation to find the optimal degree of smoothing on each of the training data. Provide a plot of the data points and fitted spline curve for the first training data. Also, present the average of the estimated effective degrees of freedom and the smoothing parameter λ, as well as the number of proper knots. Compare the average predicted MSE with the best MSE from 1.c.
+##### 1.d. 
 
 ```{r}
-data = make_sample(mortality_rate, 2707, 0.7)
+fit_smooth <- smooth.spline(x=mortality_rate$Day, y=mortality_rate$lmr, cv = T)
+pred_lmr = predict(fit_smooth, newdata=mortality_rate)$y
+MSE=mean((mortality_rate$lmr-pred_lmr)^2)
 
-train = data$train
-test = data$test
-
-smooth <- smooth.spline(x=train$Day, y=train$lmr, cv = T)
-pred = stats:::predict.smooth.spline(smooth, test$Day)
-
-cat(sprintf('MSE of the best lambda: %.2g \n', calc_mse(test$lmr, pred$y)))
-cat(sprintf('Lambda: %.2g \n', smooth$lambda))  #Smoothing parameter
-cat(sprintf('Number of Knots: %s \n', smooth$fit$nk))
-cat(sprintf('Avarage of the effective Degrees of Freedom: %.3g \n', smooth$df - 2))
-
-
+cat(sprintf('MSE: %.2g \n', MSE))
+cat(sprintf('Lambda: %.2g \n', fit_smooth$lambda))  #Smoothing parameter
+cat(sprintf('Number of Knots: %s \n', fit_smooth$fit$nk))
+cat(sprintf('Avarage of the effective Degrees of Freedom: %.3g \n', fit_smooth$df - 2))
 ```
 <br>
-> Smoothing splines performs effectively comprored to natural cubic splines with MSE of 0.055 and difference to best cubic models MSE is (1.555 - 0.055) 1.05.
+> Smoothing splines performs effectively comprored to natural cubic splines with MSE of 0.081 and difference to best cubic models MSE is (0.119 - 0.081) 0.038.
 
 
 ### Assignment 2: Comparison of GAMs with spline and loess basis functions
@@ -228,15 +203,16 @@ fit_lasso = train(mpg ~.,
                   tuneGrid = tuneGrid,
                   tuneLength = 50,
                   trControl = trainControl("LOOCV", number = 1))
-
-
-# Does not work
-#fit_lasso$finalModel
-getTrainPerf(fit_lasso)[1]
-
 ```
-<br>
-> How I can get the best model? fit_lasso$finalModel gives strange output
+```{r}
+#str(fit_lasso)
+#getTrainPerf(fit_lasso)[1]
+
+RMSE = fit_lasso$results$RMSE
+
+cat(sprintf('Lasso best Model RMSE: %.4g', RMSE[which.min(RMSE)]))
+```
+
 
 ```{r, cache=TRUE}
 # 2.b. Set up a GAM model with spline basis functions for all data
@@ -255,7 +231,7 @@ fit_gam_spline <- train(
 ```{r}
 fit_gam_spline
 #summary(fit_gam_spline$finalModel)
-cat(sprintf('Best model RMSE: %.4g', min(fit_gam_spline$results$RMSE)))
+cat(sprintf('GAM Split best model RMSE: %.4g', min(fit_gam_spline$results$RMSE)))
 ```
 
 
@@ -276,7 +252,7 @@ fit_gam_loess <- train(
 ```
 ```{r}
 fit_gam_loess
-cat(sprintf('RMSE: %.4g', min(fit_gam_loess$results$RMSE)))
+cat(sprintf('GAM Loess best model RMSE: %.4g', min(fit_gam_loess$results$RMSE)))
 ```
 
 
