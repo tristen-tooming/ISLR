@@ -1,0 +1,57 @@
+---
+title: "Lab4"
+author: "Tristen Tooming"
+date: "2/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 1: Classification with CART and boosting trees
+
+The mushroom data set http://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data includes descriptions of hypothetical samples corresponding to 22 variables measured on gilled mushrooms in the Agaricus and Lepiota Family (pp. 500-525).  Each species is identified as definitely edible, definitely poisonous, or of unknown edibility and not recommended.  This latter class was combined with the poisonous one.  Hence, the classes of the binary variable is poisonous (p) and edible (e), and located in the first column. The Guide clearly states that there is no simple rule for determining the edibility of a mushroom. Your task is to find out if this statement is true by comparing the prediction accuracies of CART and boosting trees. Note that you may need to edit this data by checking for high correlations, missing data (?) and non-varying variables.
+
+Use 25-fold CV for both methods and set up models in caret with the rpart and xgbTree options. Tune the cp parameter in rpart and the max_depth, eta and nrounds in xgbTree (you need to find suitable limits for these on your own). Present results from the accuracy evaluations as well as Variable importance plots for both methods. Which method works best and what is your conclusion regarding the statement above?
+
+#### Pre
+```{r Mushroom-Data, results='hold'}
+musrh_colnames = c("poiede","cap_shape","cap_surface","cap_color","bruises","odor",
+             "gill_attachment","gill_spacing","gill_size","gill_color"
+             ,"stalk_shape","stalk_root","stalk_surface_above_ring",
+             "stalk_surface_below_ring","stalk_color_above_ring",
+             "stalk_color_below_ring","veil_type","veil_color","ring_number",
+             "ring_type","spore_print_color","population","habitat")
+
+mushr_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data'
+
+mushr = data.frame(read.csv(url(mushr_url), header = FALSE, col.names = musrh_colnames))
+
+mushr[sapply(mushr, is.character)] = lapply(mushr[sapply(mushr, is.character)], 
+                                       as.factor)
+
+summary(mushr)
+str(mushr)
+```
+##### Data Cleaning and naming
+```{r Mushroom-Data-Cleaning-and-naming, warning=FALSE, message=FALSE}
+library(dplyr)
+
+clean_mushr = mushr %>% filter (mushr$stalk_root!='?') %>% droplevels()
+```
+
+##### 
+
+
+## Assignment 2: Investigate the prediction properties of the Random Forest method on highly correlated data
+
+In Lab 2_2, you investigated how PCR, PLS, Lasso and Ridge regression performed on the “tecator.csv” data which contains the results of a study aimed to investigate whether a near infrared absorbance spectrum can be used to predict the fat content of samples of meat. It has been noticed that the Random Forest (RF) method can be sensitive to correlated data, and it has been suggested that the mtry parameter can be tuned to lower values to improve prediction properties. Your task is to check if this is true by implementing the RF with the combination of the randomForest and caret packages.
+
+Start by explaining in detail what the mtry parameter has for role in the RF method. Then, follow the instructions for loading and editing of the data set in Lab 2_2. Set up the train model in the caret packages with 25-fold CV. Evaluate models over mtry with a sequence of values from 1 to 25. You can leave the ntrees and nodesize parameters at their default values. Is there any evidence for the claim that lower mtry yields lower prediction accuracy? Which is the best model and how does the prediction MSE compare with the estimates from Lab 2_2 PCR, PLS, Lasso and Ridge regression? What is your conclusion regarding the RF and correlated data?
+
+```{r}
+
+```
+
+
