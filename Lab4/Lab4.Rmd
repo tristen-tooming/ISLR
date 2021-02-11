@@ -28,6 +28,9 @@ mushr_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/a
 
 mushr = data.frame(read.csv(url(mushr_url), header = FALSE, col.names = musrh_colnames))
 
+#mushr[sapply(mushr, is.character)] = lapply(mushr[sapply(mushr, is.character)], 
+       #                                as.factor)
+
 mushr[sapply(mushr, is.character)] = lapply(mushr[sapply(mushr, is.character)], 
                                        as.factor)
 
@@ -38,10 +41,91 @@ str(mushr)
 ```{r Mushroom-Data-Cleaning-and-naming, warning=FALSE, message=FALSE}
 library(dplyr)
 
+# Stalk Root has ? as NA
 clean_mushr = mushr %>% filter (mushr$stalk_root!='?') %>% droplevels()
+
+# Dropping Veil Type because it has only one factor level
+clean_mushr = clean_mushr[ , !(names(clean_mushr) %in% 'veil_type')]
+
+clean_mushr_id = clean_mushr
+clean_mushr_id[sapply(clean_mushr_id, is.factor)] = lapply(clean_mushr_id[sapply(clean_mushr_id, is.factor)], 
+                                       as.numeric)
+# p = 1, e = 2
+#clean_mushr$poiede = as.numeric(factor(clean_mushr$poiede,levels=c('p','e'),labels=c(1,2)))
+str(clean_mushr)
+```
+##### Data Exploration
+```{r Data-Exploration, warning=FALSE, fig.width=10, fig.height=10}
+library(ggcorrplot)
+
+corr = round(cor(clean_mushr_id), 1)
+ggcorrplot(corr, outline.color = "white",lab = T,lab_size =4)
 ```
 
-##### 
+
+##### CART
+```{r CART, cache=TRUE}
+library(rpart)
+library(caret)
+
+# Build the CART model and find best model with LOOCV 
+# tuning the complexity parameter cp
+
+# The complexity parameter (cp) is used to control the size of the decision tree
+# and to select the optimal tree size. If the cost of adding another variable 
+# to the decision tree from the current node is above the value of cp, 
+# then tree building does not continue. We could also say that tree construction
+# does not continue unless it would decrease the overall lack of fit by a factor of cp.
+
+ctrl <- trainControl(method = "cv",
+                     number = 25,
+                     search = 'grid') 
+
+cart <- train(
+   poiede~., data = clean_mushr, method = "rpart",
+   trControl = ctrl,
+   tuneGrid = expand.grid(cp = seq(0.01, 0.15, length = 30)))
+
+```
+
+```{r, results='hold', rows.print=20}
+plot(cart)
+cart$bestTune
+varImp(cart)
+```
+```{r Boost, cache=TRUE}
+
+# Maximum depth of a tree. Increasing this value will make the model more complex
+# and more likely to overfit. 0 is only accepted in lossguided growing policy
+# when tree_method is set as hist or gpu_hist and it indicates no limit on depth
+# Beware that XGBoost aggressively consumes memory when training a deep tree.
+
+# nrounds: the number of decision trees in the final model
+
+myparamGrid <- expand.grid(max_depth = c(1,2,3),
+                          eta = seq(from=0.05, to=0.2, by=0.05),
+                          nrounds=c(10, 25, 50),
+                          gamma=0,
+                          colsample_bytree=1,
+                          min_child_weight=1,
+                          subsample=1
+                           )
+
+boost <- train(poiede~.,
+               data = clean_mushr,
+               method = "xgbTree",
+               trControl = ctrl,
+               tuneGrid = myparamGrid)
+
+```
+```{r, rows.print = 20}
+plot(boost)
+print(filter(varImp(boost)$importance, Overall > 0))
+```
+
+
+#### Conclusion
+Overall both methods gave similar accuracies and are better than just randomly guessing if the mushroom is poisonous. So on we can say that poisonous mushrooms tend to have certain type attributes which distinct them from edible ones specially the odor. Personally, I would choose the Boosted Random Forest with shrinkage of 0.10, depth of 2 and with 25 boosting iterations. Is this overfitted? 
 
 
 ## Assignment 2: Investigate the prediction properties of the Random Forest method on highly correlated data
@@ -50,8 +134,40 @@ In Lab 2_2, you investigated how PCR, PLS, Lasso and Ridge regression performed 
 
 Start by explaining in detail what the mtry parameter has for role in the RF method. Then, follow the instructions for loading and editing of the data set in Lab 2_2. Set up the train model in the caret packages with 25-fold CV. Evaluate models over mtry with a sequence of values from 1 to 25. You can leave the ntrees and nodesize parameters at their default values. Is there any evidence for the claim that lower mtry yields lower prediction accuracy? Which is the best model and how does the prediction MSE compare with the estimates from Lab 2_2 PCR, PLS, Lasso and Ridge regression? What is your conclusion regarding the RF and correlated data?
 
-```{r}
-
+#### Pre
+```{r 2. pre}
+tecator = read.csv("/Users/tuuba/code/ISRL/Lab2/tecator.csv")
+tecator_subset = tecator[ , !names(tecator) %in% c('Sample', 'Protein', 'Moisture')]
 ```
 
+```{r RF, cache=TRUE}
+library(randomForest)
 
+control <- trainControl(method='cv', 
+                        number=25, 
+                        search = 'grid')
+
+#Number randomely variable selected is mtry
+mtry <- 1:25
+tunegrid <- expand.grid(.mtry=mtry)
+rf_model <- train(Fat~., 
+                  data=tecator_subset, 
+                  method='rf',
+                  metric = 'RMSE',
+                  tuneGrid=tunegrid,
+                  trControl=control)
+```
+```{r}
+plot(rf_model)
+
+mse_model = min(rf_model$results$RMSE) ** 2
+# cat(sprintf('RF Best MSE: %.2f', mse_model))
+```
+<br>
+PCR MSE:        4.70
+PLS MSE:        3.92
+Lasso MSE:      12.42
+Ridge MSE:      17.30
+RF MSE:         42.95
+
+Based on the plot lower mtry results decresed MSE in this dataset. The decay is exponential and so on remarkable specially from 1 to 10 chosen predictors. Compared to Lab 2 methods Random Forests MSE is 2-9 times bigger. This proofs Random Forests issues with highly correlated data and indicates to use regression methods instead. 
