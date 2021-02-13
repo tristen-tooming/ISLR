@@ -89,6 +89,7 @@ cart <- train(
 ```
 
 ```{r, results='hold', rows.print=20}
+library(caret)
 plot(cart)
 cart$bestTune
 varImp(cart)

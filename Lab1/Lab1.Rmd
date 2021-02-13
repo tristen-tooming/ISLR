@@ -1,0 +1,172 @@
+---
+title: "Lab1"
+author: "Tristen Tooming"
+date: "2/13/2021"
+output: html_document
+---
+
+### 1
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### A
+```{r}
+n <- 500 # Number of Observations (Rows)
+p <- 20 # Number of "Variables"
+ntr <- 5 # Number of datasets to be simulated
+sig <- 0.2 # Scale parameter
+X <- matrix(rnorm(n*p),ncol=p,nrow=n) # Generating values
+set.seed(3) # Seed for the random generator
+b_imp <- rnorm(ntr) # Random draw from normal distribution
+b_zero <- rep(0,(p-ntr)) # zero vector
+b_true <- c(b_imp,b_zero) #
+y <- X%*%b_true + sig * rnorm(n) # Generating response values
+```
+
+#### B
+```{r}
+# Data frame
+data = data.frame(y=y, X=X)
+# Splitting data
+train_portition = 0.7
+sample_size = floor(n * train_portition)
+set.seed(2707)
+train_index = sample(seq_len(n), size = sample_size)
+train = data[train_index, ]
+test = data[-train_index, ]
+```
+
+#### C
+```{r}
+# Fitting the Model
+linear_model = lm(y ~ ., data = train)
+# Anova
+anova(linear_model)
+```
+
+> Based on the F-test variables X.1, X.2, X.3, X.4 and X.5 are significant. Variable X.6 could be
+useful for improving model performance but needs more validation than simple F-test.
+
+```{r}
+mse_train = c()
+mse_test = c()
+variables = names(data)[-1]
+for (i in 1:p) {
+  lm_formula = as.formula(paste('y ~ ', paste(variables[1:i], collapse = '+')))
+  fit_train = lm(lm_formula, data=train)
+  mse_train = c(mse_train, anova(fit_train)['Residuals', 'Mean Sq'])
+  mse_test = c(mse_test, mean((test$y - predict.lm(fit_train, test)) ^ 2))
+}
+```
+```{r}
+plot(mse_train, type = 'l', col = 'red', ylab = 'MSE')
+lines(mse_test, type = 'l', col = 'blue')
+legend(15, 1.25, col = c('red', 'blue'), legend = c('Train', 'Test'), pch = 16)
+```
+```{r}
+knitr::kable(data.frame(Iteration = 1:length(mse_test),MSE_Train = mse_train, MSE_Test = mse_test))
+```
+
+> Model performance increases significally when fourth term is included and reaches its maxium with fifth
+predictor. After that there is no significant increase in performance when comparing models with MSE. We
+choose to use model with formula y ~ X1 + X2 + X3 + X4 + X5. Minimum MSE test is at iteration #5 
+
+### 2
+
+```{r}
+# Reading data
+url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt'
+wheat_seeds = read.table(url)
+# Factoring and Naming variables
+column_names = c('Area_A',
+'Åerimeter_P',
+'Compactness_C',
+'Length_of_kernel',
+'Width_of_kernel',
+'Asymmetry_coefficient',
+'Length_of_kernel_groove',
+'Variety')
+colnames(wheat_seeds) = column_names
+variety_names = c()
+wheat_seeds$Variety = as.factor(wheat_seeds$Variety)
+set.seed(3)
+
+wheat_seeds_permuted = sample(wheat_seeds)
+# Splitting data
+train_portition = 0.7
+n = nrow(wheat_seeds)
+sample_size = floor(n * train_portition)
+set.seed(2707)
+train_index = sample(seq_len(n), size = sample_size)
+wheat_seeds_train = wheat_seeds_permuted[train_index, ]
+wheat_seeds_test = wheat_seeds_permuted[-train_index, ]
+
+calc_acc = function(actual, predicted) {
+accuracy = sum( actual == predicted)/length(actual) * 100
+return(round(accuracy, 2))
+}
+```
+
+
+```{r}
+# Packages
+library(nnet)
+# Model fit
+model_multinom = multinom(Variety ~ ., data = wheat_seeds_train)
+predicted_multinom_wheat_seeds = predict(model_multinom, wheat_seeds_test)
+acc_multinom = calc_acc(wheat_seeds_test$Variety, predicted_multinom_wheat_seeds)
+cat(sprintf("\n\nModel Acc: %s", acc_multinom))
+```
+
+
+```{r}
+library(class)
+accuracies = c() # Index = K-value
+for (i in 1:25) {
+fitted_knn = knn(train = wheat_seeds_train,
+test = wheat_seeds_test,
+k= i,
+cl = wheat_seeds_train$Variety)
+accuracies = c(accuracies, calc_acc(wheat_seeds_test$Variety, fitted_knn))
+}
+for (i in 1:length(accuracies)) {
+cat(sprintf("K-value: %s, Accuracy: %s\n", i, accuracies[i]))
+}
+
+
+cat(sprintf('\n\nBest Model: %s', which(accuracies==max(accuracies))
+))
+
+acc_knn = max(accuracies)
+```
+
+
+#### C
+```{r}
+library(MASS)
+model_lda = lda(Variety ~ ., data = wheat_seeds_train)
+predicted_lda = predict(model_lda, wheat_seeds_test)$class
+acc_lda = calc_acc(wheat_seeds_test$Variety, predicted_lda)
+cat(sprintf('LDA accuracy %s', acc_lda))
+```
+
+
+```{r}
+barplot(c(acc_multinom, acc_knn, acc_lda),
+names.arg = c('Multinom', 'KNN', 'LDA'),
+main = 'Prediction Accuracies',
+col = c('#b2e8c2', '#33a892', '#483f72'))
+
+
+pairs(wheat_seeds, col = wheat_seeds$Variety, main = "Matrix Scatterplot of the Data")
+```
+
+
+>Conclusion With 100% (K-value = 1) accuracy KNN performs best then comes LDA with 95% accuracy
+and finally Multinomial with 89% accuracy. As seen in the scatter plot matrix varieties are forming distinct
+6
+clusters from each other and so on indicating good performance of the KNN. All in all I would choose KNN
+for this particular dataset for predicting wheat varieties for its good accuracy, cheap computing costs and
+specially for its simplicity

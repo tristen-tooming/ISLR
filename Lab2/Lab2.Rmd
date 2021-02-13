@@ -146,8 +146,8 @@ smp_size <- floor(0.75 * nrow(tecator_subset))
 train_ind <- sample(seq_len(nrow(tecator_subset)), size = smp_size)
 tecator_train = tecator_subset[train_ind, ]
 tecator_test = tecator_subset[-train_ind, ]
-
-parcoord(tecator_subset)
+x = 1:215
+matplot(x = x, y=tecator_subset, type = 'l')
 ```
 > Conclusion: The straight lines indicate good linear relationships so on PCR, PLS, Lasso and Ridge ression could be suitable to model the data.
 
