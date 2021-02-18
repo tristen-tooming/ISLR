@@ -1,0 +1,97 @@
+---
+title: "Lab5"
+author: "Tristen Tooming"
+date: "2/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 1: Create a spam filter using Support Vector Machines with different kernels
+
+The data file spambase.csv contains information about the frequency of various words, characters etc for a total of 4601 e-mails. Furthermore, these e-mails have been classified as spams (spam = 1) or regular e-mails (spam = 0). Make sure to transform this variable to a factor. Your task is to develop a function based on the SVM model that can be used as a spam filter.
+
+```{r 1-Pre-read-data}
+spam = read.csv("spambase.csv", header = T)
+spam$Spam = as.factor(spam$Spam)
+
+# Spam = 1, regular = 0
+str(spam)
+```
+
+
+#### 1.a.
+
+Use the tune() function with the svm option in the e1071() library to tune the cost parameter over a reasonable number of values for the linear kernel. Use all data as training data. Tune your procedure by calculating the accuracy and present evidence that you have obtained the best tuning.
+
+```{r Tuning-parameter, cache=TRUE}
+library(e1071)
+
+# Tried cost with 0.01, 0.1, 1, 10, 100
+# This resulted best model with cost 10
+# Used 5:15
+svmlincv <- tune(svm, Spam ~.,data=spam,kernel="linear",
+             ranges=list(cost=5:15))
+
+```
+```{r Summary-best-lin-cv, results='hold', rows.print=20}
+library(caret)
+
+svmlincv$performances
+
+cat("\n\n Best SVM model with Linear kernel")
+best_lin = svmlincv$best.model
+summary(best_lin)
+confusionMatrix(spam$Spam, predict(best_lin))
+```
+> 
+
+#### 1.b.
+
+Repeat the analysis in 1.a. with the radial basis function kernel, calculate new accuracies and provide evidence for the best model.
+
+```{r SVM-radial, cache=TRUE}
+svmradcv <- tune(svm, Spam ~.,data=spam,kernel="radial",
+             ranges=list(cost=c(0.01, 0.1, 1, 2, 3, 4, 5, 6)))
+```
+```{r Summary-best-lin-cv, results='hold', rows.print=20}
+
+svmradcv$performances
+
+cat("\n\n Best SVM model with Radial kernel")
+best_rad = svmradcv$best.model
+summary(best_rad)
+confusionMatrix(spam$Spam, predict(best_rad))
+```
+
+
+1.c. Based on the results from 1.a. and 1.b. present a function of the best method that reads new test observations and outputs the prediction if the mail was a spam or not.
+```{r Spam-filter}
+
+check_if_spam = function(data) {
+  # words as a vector
+  prediction = predict(best_rad, data)
+  if (prediction == 1) {
+    cat("\n SPAM SPAM SPAM. No need to read")
+  }
+  else {
+    cat("\n You can read this email")
+  }
+    
+}
+
+for (i in c(2000, 1, 15, 25)) {
+  check_if_spam(spam[i, ])
+  if (as.integer(as.character(spam$Spam[i])) == 1) {
+    cat("\nCorrect: SPAM \n")
+  } else {
+    cat("\nCorrect: Not a Spam \n")
+  }
+}
+
+
+data = as.numeric(levels(spam$Spam))[spam$Spam]
+```
+
