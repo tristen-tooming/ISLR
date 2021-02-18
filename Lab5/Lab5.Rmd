@@ -46,7 +46,7 @@ best_lin = svmlincv$best.model
 summary(best_lin)
 confusionMatrix(spam$Spam, predict(best_lin))
 ```
-> 
+
 
 #### 1.b.
 
@@ -56,7 +56,7 @@ Repeat the analysis in 1.a. with the radial basis function kernel, calculate new
 svmradcv <- tune(svm, Spam ~.,data=spam,kernel="radial",
              ranges=list(cost=c(0.01, 0.1, 1, 2, 3, 4, 5, 6)))
 ```
-```{r Summary-best-lin-cv, results='hold', rows.print=20}
+```{r Summary-best-radil-cv, results='hold', rows.print=20}
 
 svmradcv$performances
 
@@ -67,17 +67,19 @@ confusionMatrix(spam$Spam, predict(best_rad))
 ```
 
 
+> Radial has a better accuracy
+
 1.c. Based on the results from 1.a. and 1.b. present a function of the best method that reads new test observations and outputs the prediction if the mail was a spam or not.
-```{r Spam-filter}
+```{r Spam-filter, results='hold'}
 
 check_if_spam = function(data) {
   # words as a vector
   prediction = predict(best_rad, data)
   if (prediction == 1) {
-    cat("\n SPAM SPAM SPAM. No need to read")
+    cat("\nAnswer: SPAM SPAM SPAM. No need to read")
   }
   else {
-    cat("\n You can read this email")
+    cat("\nAnswer: You can read this email")
   }
     
 }
@@ -94,4 +96,94 @@ for (i in c(2000, 1, 15, 25)) {
 
 data = as.numeric(levels(spam$Spam))[spam$Spam]
 ```
+
+## Assignment 2: Investigate the prediction properties of the Support Vector Regression method with different kernels
+
+In Lab 3_2, you investigated how the Lasso and different GAM models performed on the auto-mpg.txt data which concerns city-cycle fuel consumption in miles per gallon, to be predicted in terms of 3 multivalued discrete and 5 continuous attributes. Follow the instructions there regarding the data. Your task is to compare the results from the GAM models with the prediction properties of Support Vector Regression (SVR) with different kernels using the kernlab and caret packages.
+
+```{r}
+library(caret)
+library(kernlab)
+
+auto_mpg = read.table('auto-mpg.txt', header = T)
+
+auto_mpg$year = factor(auto_mpg$year)
+auto_mpg$origin = factor(auto_mpg$origin)
+
+auto_mpg = auto_mpg[ , !(names(auto_mpg) %in% 'name')]
+
+summary(auto_mpg)
+```
+
+2.a. Set up a SVR model with the linear kernel function for all data with the train() function in the caret package and use LOOCV to find the best RMSE. Find a reasonable interval for the tuning parameter C. Present the table of the evaluated models and their model fit criteria.
+
+```{r SVM-LOOCV-LIN, cache=TRUE, results='hold'}
+# Build the SWM model with linear kernel and find best 
+# model with LOOCV tuning the cost parameter
+svm_lin <- train(
+  mpg~., data = auto_mpg, method = "svmLinear",
+  trControl = trainControl("LOOCV"),
+  tuneGrid = expand.grid(C = seq(0.7,1, length = 30)))
+```
+```{r, results='hold'}
+cat(sprintf("Best RMSE: %.3f\n", min(svm_lin$results$RMSE)))
+plot(svm_lin)
+```
+
+
+
+2.b. Set up a SVR model with the radial basis kernel function for all data with the train() function in the caret package and use LOOCV to find the RMSE. Find a reasonable interval for the tuning parameter C. Present the table of the evaluated models and their model fit criteria.
+
+```{r SVM-LOOCV-RAD, cache=TRUE}
+# Build the SWM model with linear kernel and find best 
+# model with LOOCV tuning the cost parameter
+svm_rad <- train(
+  mpg~., data = auto_mpg, method = "svmRadial",
+  trControl = trainControl("LOOCV"),
+  tuneGrid = expand.grid(C = 3:10,
+                      sigma = seq(0.001,0.2,length = 10)))
+```
+```{r}
+svm_rad
+cat(sprintf("Best RMSE: %.3f\n", min(svm_rad$results$RMSE)))
+plot(svm_rad)
+```
+
+
+2.c. Set up a SVR model with the BRF kernel function for all data with the train() function in the caret package and use LOOCV to find the RMSE. Find a reasonable interval for the tuning parameter C and sigma. Present the table of the evaluated models and their model fit criteria.
+
+```{r SVR-RBF, cache=TRUE}
+# Build the SVR model with RBF kernel and find best model with 
+# LOOCV tuning the cost 
+parameter_svr_rbf <- train(
+  mpg~., data = auto_mpg, method = "svmRadialCost",
+  trControl = trainControl(method = "LOOCV"),
+  tuneGrid = expand.grid(C = seq(2, 4, length.out = 30)))
+
+```
+```{r, results='hold'}
+parameter_svr_rbf
+cat(sprintf("Best RMSE: %.3f\n", min(parameter_svr_rbf$results$RMSE)))
+plot(parameter_svr_rbf)
+```
+
+
+2.d. How did the SVR models perform in comparison with the LASSO and GAM models? Provide a discussion that not only takes MSE into account but also computing time.
+
+Parameter tuning
+
+
+GAM Loess:     2.734
+GAM Spline:    2.714
+Lasso:         3.144
+SVM Lin:       3.182
+SVM Rad:       2.843
+SVM BRF:       2.824
+
+
+SVM Lin performed worst when comparing with RMSE. SVM Rad had the longest computing time and needed most tweaking (two expensive parameters to tune). Overall support vector machines are more cost expensive, more demanding to tune and the models are complexier compared to general additive models and specially with Lasso. With GAM and Lasso you can easily see the effect of the variables and deep dive the models diagnostics. 
+
+
+
+
 
