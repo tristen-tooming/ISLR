@@ -75,7 +75,7 @@ spec <- feature_spec(tecator_data, Fat ~ . ) %>%
 input <- layer_input_from_dataset(tecator_data %>% select(-Fat))
 outputlr <- input %>% 
   layer_dense_features(dense_features(spec)) %>% 
-  layer_dense(units = 1,activation = 'linear') 
+  layer_dense(units = 1,activation = 'linear', use_bias = T) # Output is 1 dimensional?
 modellr <- keras_model(input, outputlr)
 
 ```
@@ -85,10 +85,10 @@ modellr <- keras_model(input, outputlr)
 modellr %>% 
    compile(
       loss = "mse",
-      optimizer = optimizer_rmsprop(lr = 0.001), # Default 0.001
+      optimizer = optimizer_rmsprop(lr = 0.01), # Default 0.001
       metrics = list("mean_squared_error"))
 # The patience parameter is the amount of epochs to check for improvement
-early_stop_lr <- callback_early_stopping(monitor = "val_loss", patience = 20)
+early_stop_lr <- callback_early_stopping(monitor = "val_loss", patience = 50)
 # Save best model to a file
 save_best_lr <- callback_model_checkpoint(
   "best_model_lr.hdf5",
@@ -108,20 +108,16 @@ historylr <- modellr %>% fit(
   validation_split = 0.2,
   verbose = 1,
   batch_size = 32,
-  callbacks = list(early_stop_lr,save_best_lr)
+  callbacks = list(early_stop_lr, save_best_lr)
 )
 
 ```
 ```{r Deep-Learning-Model-Stats}
 # Plot of validation loss
-plot(historylr$metrics$val_loss,xlab="Epoch",ylab="Val_loss", type = 'l', col="blue")
+plot(historylr$metrics$val_loss,xlab="Epoch",
+     ylab="Log of Val_loss", type = 'l', col="blue")
 # Best validation MSE
 deep_mse = min(historylr$metrics$val_loss)
-# Load best model from saved file
-load_model_weights_hdf5(
-  modellr,
-  "best_model_lr.hdf5"
-)
 
 cat(sprintf("Min Deep MSE: %.3f", deep_mse))
 ```
@@ -131,12 +127,12 @@ cat(sprintf("Min Deep MSE: %.3f", deep_mse))
 
 **How did the models perform in comparison with the earlier tried models?** 
 
-**PPR MSE:        2.53**
-PLS MSE:        3.92
-PCR MSE:        4.70
-Lasso MSE:      12.42
-Ridge MSE:      17.30
-**NN MSE:       16.97**
-RF MSE:         42.95
+1. **PPR MSE:        2.53**
+2. PLS MSE:        3.92\n
+3. PCR MSE:        4.70\n
+4. Lasso MSE:      12.42\n
+5. Ridge MSE:      17.30\n
+6. **NN MSE:       16.97**
+7. RF MSE:         42.95
 
 Overall PPR perfoms best with MSE of 2.53. It was simple to use and tuning was a no brainer. Neural Networks were a hassle, took longer to configure and tuning was more a try and error. There wasn't informative graphs to look which could have supported the tuning decisions.
