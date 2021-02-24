@@ -47,7 +47,7 @@ library(tensorflow)
 tf$constant("Hellow Tensorflow")
 ```
 
-```{r Deep-Learning-Model-Standartization, cache=TRUE}
+```{r Deep-Learning-Model-Standartization}
 library(keras)
 library(dplyr)
 library(tfdatasets)
@@ -73,6 +73,7 @@ spec <- feature_spec(tecator_data, Fat ~ . ) %>%
 ```
 ```{r Deep-Learning-Multiple-Regression-Model}
 input <- layer_input_from_dataset(tecator_data %>% select(-Fat))
+
 outputlr <- input %>% 
   layer_dense_features(dense_features(spec)) %>% 
   layer_dense(units = 1,activation = 'linear', use_bias = T) # Output is 1 dimensional?
@@ -80,7 +81,7 @@ modellr <- keras_model(input, outputlr)
 
 ```
 
-```{r Deep-Learning-Compile-Model}
+```{r Deep-Learning-Compile-Model, cache=T}
 # Compile model 
 modellr %>% 
    compile(
@@ -104,7 +105,7 @@ save_best_lr <- callback_model_checkpoint(
 historylr <- modellr %>% fit(
   x = tecator_data %>% select(-Fat),
   y = tecator_data$Fat,
-  epochs = 500,
+  epochs = 1000,
   validation_split = 0.2,
   verbose = 1,
   batch_size = 32,
@@ -114,7 +115,11 @@ historylr <- modellr %>% fit(
 ```
 ```{r Deep-Learning-Model-Stats}
 # Plot of validation loss
+par(mfrow=c(1,2))
 plot(historylr$metrics$val_loss,xlab="Epoch",
+     ylab="Val_loss", type = 'l', col="blue")
+
+plot(log(historylr$metrics$val_loss),xlab="Epoch",
      ylab="Log of Val_loss", type = 'l', col="blue")
 # Best validation MSE
 deep_mse = min(historylr$metrics$val_loss)
@@ -132,7 +137,7 @@ cat(sprintf("Min Deep MSE: %.3f", deep_mse))
 3. PCR MSE:        4.70\n
 4. Lasso MSE:      12.42\n
 5. Ridge MSE:      17.30\n
-6. **NN MSE:       16.97**
+6. **NN MSE:        17.47**
 7. RF MSE:         42.95
 
-Overall PPR perfoms best with MSE of 2.53. It was simple to use and tuning was a no brainer. Neural Networks were a hassle, took longer to configure and tuning was more a try and error. There wasn't informative graphs to look which could have supported the tuning decisions.
+Overall PPR perfoms best with MSE of 2.53. It was simple to use and tuning was a no brainer. Neural Networks were a hassle, took longer to configure and tuning was more a try and error. There wasn't informative graphs to look which could have supported the tuning decisions. Also the end result is random and so on running the model again you can better or worse score of MSE. Personally I think that I didn't find optimal hyperparameters for the learning procedure and so on I didn't get "optimal" results.
