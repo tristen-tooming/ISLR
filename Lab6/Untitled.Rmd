@@ -4,3 +4,25 @@ author: "Tristen Tooming"
 date: "2/24/2021"
 output: html_document
 ---
+
+## Assignment 1: Investigate the prediction properties of Project Pursuit Regression, Multi Layer Perceptron, Convolutional Neural Network and Recurrent Neural Network.
+
+In Lab 2_2 and 4_2, you investigated how PCR, PLS, Lasso, Ridge regression and Random Forest performed on the “tecator.csv” data which contains the results of a study aimed to investigate whether a near infrared absorbance spectrum can be used to predict the fat content of samples of meat. This data consists of highly correlated predictor sequences with an associated quantitative measurement. Your task is to implement and compare the prediction properties of the PPR using the ppr function in caret and MLP, 1dCNN and a RNN (LSTM) in Keras.
+
+#### 1.a.
+
+Set up a PPR model for all data with the train() function in the caret package and use LOOCV to find the best RMSE. Find a reasonable interval for the tuning parameter nterms. Present the table of the evaluated models and their model fit criteria.
+
+```{r}
+
+```
+
+#### 1.b.
+
+Set up Keras models for the MLP, 1dCNN and a RNN (LSTM) following the web guide:
+https://letyourmoneygrow.com/2018/05/27/classifying-time-series-with-keras-in-r-a-step-by-step-example/ 
+Tune the models with the validation error and calculate test MSE for the full data following the lecture notes. Make sure that the validation error drops and converges to values around a minimum, but you need to take your own decision on what parameters to tune. Note that the LSTM model can be difficult to tune. Present the table of the evaluated models and their model fit criteria.
+
+#### 1.c.
+
+** How did the models perform in comparison with the earlier tried models? ** 
