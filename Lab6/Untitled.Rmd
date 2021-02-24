@@ -1,0 +1,6 @@
+---
+title: "Lab6"
+author: "Tristen Tooming"
+date: "2/24/2021"
+output: html_document
+---

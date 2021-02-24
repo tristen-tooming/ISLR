@@ -466,17 +466,17 @@ best_lin = svmlincv$best.model
 summary(best_lin)
 confusionMatrix(spam$Spam, predict(best_lin))</code></pre>
 <pre><code>##    cost      error dispersion
-## 1     5 0.07063237 0.01205551
-## 2     6 0.06998019 0.01212165
-## 3     7 0.06932849 0.01197930
-## 4     8 0.06954588 0.01243353
-## 5     9 0.06954588 0.01243353
-## 6    10 0.06889418 0.01205311
-## 7    11 0.06867679 0.01227505
-## 8    12 0.06867679 0.01197186
-## 9    13 0.06932896 0.01245663
-## 10   14 0.06932896 0.01220108
-## 11   15 0.06954635 0.01174312
+## 1     5 0.06890031 0.01368498
+## 2     6 0.06803122 0.01413881
+## 3     7 0.06759596 0.01494552
+## 4     8 0.06781288 0.01445633
+## 5     9 0.06824719 0.01333620
+## 6    10 0.06802980 0.01379465
+## 7    11 0.06802980 0.01449987
+## 8    12 0.06802933 0.01446143
+## 9    13 0.06802933 0.01446143
+## 10   14 0.06781194 0.01452460
+## 11   15 0.06759455 0.01461986
 ## 
 ## 
 ##  Best SVM model with Linear kernel
@@ -488,11 +488,11 @@ confusionMatrix(spam$Spam, predict(best_lin))</code></pre>
 ## Parameters:
 ##    SVM-Type:  C-classification 
 ##  SVM-Kernel:  linear 
-##        cost:  11 
+##        cost:  15 
 ## 
-## Number of Support Vectors:  927
+## Number of Support Vectors:  935
 ## 
-##  ( 445 482 )
+##  ( 447 488 )
 ## 
 ## 
 ## Number of Classes:  2 
@@ -506,32 +506,29 @@ confusionMatrix(spam$Spam, predict(best_lin))</code></pre>
 ## 
 ##           Reference
 ## Prediction    0    1
-##          0 2670  118
-##          1  178 1635
+##          0 2668  120
+##          1  176 1637
 ##                                           
 ##                Accuracy : 0.9357          
 ##                  95% CI : (0.9282, 0.9426)
-##     No Information Rate : 0.619           
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##     No Information Rate : 0.6181          
+##     P-Value [Acc &gt; NIR] : &lt; 2e-16         
 ##                                           
-##                   Kappa : 0.8645          
+##                   Kappa : 0.8646          
 ##                                           
-##  Mcnemar&#39;s Test P-Value : 0.0006051       
+##  Mcnemar&#39;s Test P-Value : 0.00139         
 ##                                           
-##             Sensitivity : 0.9375          
-##             Specificity : 0.9327          
-##          Pos Pred Value : 0.9577          
-##          Neg Pred Value : 0.9018          
-##              Prevalence : 0.6190          
-##          Detection Rate : 0.5803          
+##             Sensitivity : 0.9381          
+##             Specificity : 0.9317          
+##          Pos Pred Value : 0.9570          
+##          Neg Pred Value : 0.9029          
+##              Prevalence : 0.6181          
+##          Detection Rate : 0.5799          
 ##    Detection Prevalence : 0.6060          
-##       Balanced Accuracy : 0.9351          
+##       Balanced Accuracy : 0.9349          
 ##                                           
 ##        &#39;Positive&#39; Class : 0               
 ## </code></pre>
-<blockquote>
-
-</blockquote>
 </div>
 <div id="b." class="section level4">
 <h4>1.b.</h4>
@@ -628,7 +625,10 @@ for (i in c(2000, 1, 15, 25)) {
   } else {
     cat(&quot;\nCorrect: Not a Spam \n&quot;)
   }
-}</code></pre>
+}
+
+
+data = as.numeric(levels(spam$Spam))[spam$Spam]</code></pre>
 <pre><code>## 
 ## Answer: You can read this email
 ## Correct: Not a Spam 
@@ -641,7 +641,6 @@ for (i in c(2000, 1, 15, 25)) {
 ## 
 ## Answer: You can read this email
 ## Correct: SPAM</code></pre>
-<pre class="r"><code>data = as.numeric(levels(spam$Spam))[spam$Spam]</code></pre>
 </div>
 </div>
 <div id="assignment-2-investigate-the-prediction-properties-of-the-support-vector-regression-method-with-different-kernels" class="section level2">
@@ -855,7 +854,7 @@ plot(parameter_svr_rbf)</code></pre>
 <p>2.d. How did the SVR models perform in comparison with the LASSO and GAM models? Provide a discussion that not only takes MSE into account but also computing time.</p>
 <p>Parameter tuning</p>
 <p>GAM Loess: 2.734 GAM Spline: 2.714 Lasso: 3.144 SVM Lin: 3.182 SVM Rad: 2.843 SVM BRF: 2.824</p>
-<p>SVM Rad performed worst when comparing with RMSE. Also it had the longest computing time and needed most tweaking (two expensive parameters to tune). Overall support vector machines are more cost expensive, more demanding to tune and the models are complexier compared to general additive models and specially with Lasso. With GAM and Lasso you can easily see the effect of the variables and deep dive the models diagnostics.</p>
+<p>SVM Lin performed worst when comparing with RMSE. SVM Rad had the longest computing time and needed most tweaking (two expensive parameters to tune). Overall support vector machines are more cost expensive, more demanding to tune and the models are complexier compared to general additive models and specially with Lasso. With GAM and Lasso you can easily see the effect of the variables and deep dive the models diagnostics.</p>
 </div>
 
 

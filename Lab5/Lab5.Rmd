@@ -26,7 +26,7 @@ str(spam)
 
 Use the tune() function with the svm option in the e1071() library to tune the cost parameter over a reasonable number of values for the linear kernel. Use all data as training data. Tune your procedure by calculating the accuracy and present evidence that you have obtained the best tuning.
 
-```{r Tuning-parameter, cache=TRUE}
+```{r Tuning-parameter, cache=FALSE}
 library(e1071)
 
 # Tried cost with 0.01, 0.1, 1, 10, 100
