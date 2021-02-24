@@ -9,12 +9,31 @@ output: html_document
 
 In Lab 2_2 and 4_2, you investigated how PCR, PLS, Lasso, Ridge regression and Random Forest performed on the “tecator.csv” data which contains the results of a study aimed to investigate whether a near infrared absorbance spectrum can be used to predict the fat content of samples of meat. This data consists of highly correlated predictor sequences with an associated quantitative measurement. Your task is to implement and compare the prediction properties of the PPR using the ppr function in caret and MLP, 1dCNN and a RNN (LSTM) in Keras.
 
+```{r Tecator-Data}
+tecator = read.csv("/Users/tuuba/code/ISRL/Lab2/tecator.csv")
+tecator_data = tecator[ , !names(tecator) %in% c('Sample', 'Protein', 'Moisture')]
+```
+
 #### 1.a.
 
 Set up a PPR model for all data with the train() function in the caret package and use LOOCV to find the best RMSE. Find a reasonable interval for the tuning parameter nterms. Present the table of the evaluated models and their model fit criteria.
 
-```{r}
+```{r, cache=TRUE, message=FALSE}
+library(caret)
+# getModelInfo("ppr")[[1]]$grid
+# Build the Project Pursuit Regression model and find best # model with LOOCV tuning the nterms parameter
+ppr_model <- train(
+  Fat~., data = tecator_data, method = "ppr",
+  trControl = trainControl("LOOCV"),
+  tuneGrid = expand.grid(nterms = seq(1, 5, length = 5)))
+```
 
+```{r PPR-stats, results='hold'}
+plot(ppr_model)
+
+ppr_MSE = min(ppr_model$results$RMSE) ** 2
+ppr_model
+cat(sprintf("Best PPR MSE: %.3f", ppr_MSE))
 ```
 
 #### 1.b.
@@ -23,6 +42,101 @@ Set up Keras models for the MLP, 1dCNN and a RNN (LSTM) following the web guide:
 https://letyourmoneygrow.com/2018/05/27/classifying-time-series-with-keras-in-r-a-step-by-step-example/ 
 Tune the models with the validation error and calculate test MSE for the full data following the lecture notes. Make sure that the validation error drops and converges to values around a minimum, but you need to take your own decision on what parameters to tune. Note that the LSTM model can be difficult to tune. Present the table of the evaluated models and their model fit criteria.
 
+```{r, message=FALSE}
+library(tensorflow)
+tf$constant("Hellow Tensorflow")
+```
+
+```{r Deep-Learning-Model-Standartization, cache=TRUE}
+library(keras)
+library(dplyr)
+library(tfdatasets)
+
+# Comparison with OLS, scaled predictors
+x<-tecator_data[, -1]
+y<-tecator_data[, 1]
+xsc<-scale(x)
+
+# Data editing for Keras
+col_names <- colnames(x)
+colnames(x) <- NULL
+train_df <- x %>% 
+  as_tibble(.name_repair = "minimal") %>% 
+  setNames(col_names) %>% 
+  mutate(label = y)
+
+# Standardization
+spec <- feature_spec(tecator_data, Fat ~ . ) %>% 
+  step_numeric_column(all_numeric(), normalizer_fn = scaler_standard()) %>% 
+  fit()
+
+```
+```{r Deep-Learning-Multiple-Regression-Model}
+input <- layer_input_from_dataset(tecator_data %>% select(-Fat))
+outputlr <- input %>% 
+  layer_dense_features(dense_features(spec)) %>% 
+  layer_dense(units = 1,activation = 'linear') 
+modellr <- keras_model(input, outputlr)
+
+```
+
+```{r Deep-Learning-Compile-Model}
+# Compile model 
+modellr %>% 
+   compile(
+      loss = "mse",
+      optimizer = optimizer_rmsprop(lr = 0.001), # Default 0.001
+      metrics = list("mean_squared_error"))
+# The patience parameter is the amount of epochs to check for improvement
+early_stop_lr <- callback_early_stopping(monitor = "val_loss", patience = 20)
+# Save best model to a file
+save_best_lr <- callback_model_checkpoint(
+  "best_model_lr.hdf5",
+  monitor = "val_loss",
+  verbose = 0,
+  save_best_only = TRUE,
+  mode = "min",
+  save_freq = "epoch")
+```
+
+```{r Deep-Learning-Run-Model, cache=TRUE, message=F}
+# Run the analysis
+historylr <- modellr %>% fit(
+  x = tecator_data %>% select(-Fat),
+  y = tecator_data$Fat,
+  epochs = 500,
+  validation_split = 0.2,
+  verbose = 1,
+  batch_size = 32,
+  callbacks = list(early_stop_lr,save_best_lr)
+)
+
+```
+```{r Deep-Learning-Model-Stats}
+# Plot of validation loss
+plot(historylr$metrics$val_loss,xlab="Epoch",ylab="Val_loss", type = 'l', col="blue")
+# Best validation MSE
+deep_mse = min(historylr$metrics$val_loss)
+# Load best model from saved file
+load_model_weights_hdf5(
+  modellr,
+  "best_model_lr.hdf5"
+)
+
+cat(sprintf("Min Deep MSE: %.3f", deep_mse))
+```
+
+
 #### 1.c.
 
-** How did the models perform in comparison with the earlier tried models? ** 
+**How did the models perform in comparison with the earlier tried models?** 
+
+**PPR MSE:        2.53**
+PLS MSE:        3.92
+PCR MSE:        4.70
+Lasso MSE:      12.42
+Ridge MSE:      17.30
+**NN MSE:       16.97**
+RF MSE:         42.95
+
+Overall PPR perfoms best with MSE of 2.53. It was simple to use and tuning was a no brainer. Neural Networks were a hassle, took longer to configure and tuning was more a try and error. There wasn't informative graphs to look which could have supported the tuning decisions.
