@@ -46,7 +46,7 @@ Tune the models with the validation error and calculate test MSE for the full da
 library(tensorflow)
 tf$constant("Hellow Tensorflow")
 ```
-
+##### MLP
 ```{r Deep-Learning-Model-Standartization}
 library(keras)
 library(dplyr)
@@ -127,17 +127,136 @@ deep_mse = min(historylr$metrics$val_loss)
 cat(sprintf("Min Deep MSE: %.3f", deep_mse))
 ```
 
+##### RNN (LSTM)
+```{r}
+model_lstm <- keras_model_sequential()
+
+model_lstm  %>%
+  layer_lstm(units = 32, input_shape = c(215, 1), return_sequences = FALSE) %>% 
+  layer_dense(units = 1, activation = 'linear') 
+
+model_lstm %>% compile(
+      loss = "mse",
+      optimizer = optimizer_rmsprop(lr = 0.001), # Default 0.001
+      metrics = list("mean_squared_error"))
+
+model_lstm %>% summary()
+```
+```{r}
+early_stop_lr <- callback_early_stopping(monitor = "val_loss", patience = 100)
+# Save best model to a file
+save_best_lr <- callback_model_checkpoint(
+  "best_model_lstm.hdf5",
+  monitor = "val_loss",
+  verbose = 0,
+  save_best_only = TRUE,
+  mode = "min",
+  save_freq = "epoch")
+```
+
+```{r Deep-Learning-Run-Model-LSTM, cache=TRUE, message=F}
+# Run the analysis
+tecator_X = array(as.numeric(unlist(tecator_data %>% select(-Fat))), dim = c(215, 100, 1))
+tecator_y = tecator_data$Fat
+
+# Somehow when doing in a loop just model parameters massed not history
+# NVM just used wrong key. Too lazy to code loops again
+history_5 <- model_lstm %>% fit(
+              x = tecator_X,
+              y = tecator_y,
+              epochs = 2000,
+              verbose = 1,
+              batch_size = 5, 
+              validation_split = 0.2,
+              callbacks = list(early_stop_lr, save_best_lr))
+
+history_10 <- model_lstm %>% fit(
+              x = tecator_X,
+              y = tecator_y,
+              epochs = 2000,
+              verbose = 1,
+              batch_size = 10, 
+              validation_split = 0.2,
+              callbacks = list(early_stop_lr, save_best_lr))
+
+history_20 <- model_lstm %>% fit(
+              x = tecator_X,
+              y = tecator_y,
+              epochs = 2000,
+              verbose = 1,
+              batch_size = 20, 
+              validation_split = 0.2,
+              callbacks = list(early_stop_lr, save_best_lr))
+```
+
+```{r}
+plot(history_5$metrics$val_loss, type = 'l', xlim = c(0, 200), ylim = c(0,100),
+     main = 'Different batch sizes with LSTM',
+     ylab = 'Val Loss')
+lines(history_10$metrics$val_loss, col = 'blue')
+lines(history_20$metrics$val_loss, col = 'red')
+legend(150, 80, col = c('black', 'blue', 'red'),
+       legend= c('5', '10', '20'), lty = 1)
+```
+```{r}
+# Best model 20
+# Best validation MSE
+lstm_mse = min(history_20$metrics$val_loss)
+
+cat(sprintf("Min LSTM MSE: %.3f", lstm_mse))
+```
+
+##### 1d CNN
+```{r 1d-CNN, cache=TRUE, message=FALSE}
+model_1d_cnn <- keras_model_sequential()
+
+model_1d_cnn  %>%
+  layer_conv_1d(filters=5, kernel_size=10,  activation = "relu",  input_shape=c(215, 1)) %>%
+  layer_max_pooling_1d(pool_size = 4) %>%
+  layer_flatten() %>% 
+  layer_dense(units = 10, activation = 'relu')
+  layer_dense(units = 1, activation = 'linear')
+
+model_1d_cnn %>% compile(
+      loss = "mse",
+      optimizer = optimizer_rmsprop(lr = 0.001), # Default 0.001
+      metrics = list("mean_squared_error"))
+
+model_1d_cnn %>% summary()
+```
+```{r, cache=TRUE, message=FALSE}
+history_1d_cnn <- model_lstm %>% fit(
+              x = tecator_X,
+              y = tecator_y,
+              epochs = 2000,
+              verbose = 1,
+              batch_size = 32, 
+              validation_split = 0.2,
+              callbacks = list(early_stop_lr, save_best_lr))
+```
+```{r}
+plot(history_1d_cnn$metrics$val_loss, type = 'l')
+cnn_mse = min(history_1d_cnn$metrics$val_loss)
+
+cat(sprintf("Min CNN MSE: %.3f", cnn_mse))
+```
+
+
 
 #### 1.c.
 
 **How did the models perform in comparison with the earlier tried models?** 
+```{r}
+# Static values so my different from runs.
+#Could use variables because they exist in the workspace across different files
+mse_names = c('PPR', 'PLS', 'PCR', '1d CNN', 'LSTM', 'Lasso',
+              'Ridge', 'MLP', 'RF')
+mse_values = c(2.53, 3.92, 4.70, 1.73, 3.26, 12.42, 17.30, 17.47, 42.95)
 
-1. **PPR MSE:        2.53**
-2. PLS MSE:        3.92\n
-3. PCR MSE:        4.70\n
-4. Lasso MSE:      12.42\n
-5. Ridge MSE:      17.30\n
-6. **NN MSE:        17.47**
-7. RF MSE:         42.95
+mse_table = data.frame(Model = mse_names, MSE=mse_values)
+mse_table = mse_table[order(mse_table$MSE), ]
+knitr::kable(mse_table)
+```
+Overall 1d CNN performs best with MSE of 1.73, PPR was honorable number two with MSE of 2.53. Overall PPR was easiest to use of the methods in this exercise because the use was a no brainer. Neural Networks were a more hassle, took longer to configure and were and felt more like an art to tune. Universally Neural Networks took more time to get in a good shape but then again their performance were best. Personally I think that I didn't find optimal hyperparameters for the learning procedure and so on I didn't get "optimal" results.
 
-Overall PPR perfoms best with MSE of 2.53. It was simple to use and tuning was a no brainer. Neural Networks were a hassle, took longer to configure and tuning was more a try and error. There wasn't informative graphs to look which could have supported the tuning decisions. Also the end result is random and so on running the model again you can better or worse score of MSE. Personally I think that I didn't find optimal hyperparameters for the learning procedure and so on I didn't get "optimal" results.
+If the time and computing power is your limitation I would firstly try less complex methods and move to Neural Netwroks if the model performance is not desirable. Also with Neural Networks sometimes you get MSE of 50 and other times MSE of 1.73 with same parameters. Is this due to bad learning hyperparameters?
