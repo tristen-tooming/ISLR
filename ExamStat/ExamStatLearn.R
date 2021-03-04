@@ -1,35 +1,19 @@
----
-title: "Exam"
-author: "Tristen Tooming"
-date: "3/4/2021"
-output: html_document
----
-
-```{r setup, include=FALSE}
+## ----setup, include=FALSE---------------------------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
-```
 
 
-## Assignment 1. Regression
-
-The data set lakesurvey.csv contains 16 chemical and physical measurements from 2782 lakes in Scandinavia. 
-
-a. Variable selection
-Import the data into R. Set up a model where pH is the response and the rest of the variables are predictors. Perform Best subset selection and present the best models (selected variables and their regression coefficients) based on both BIC and Mallows Cp. The next task is to perform variable selection with the LASSO using the glmnet package. Tune the regularization parameter with 500-fold CV. Present a plot that shows that the minimum MSE has been obtained. Also present the selected variables and their regression coefficients. Compare and discuss the results from both analyses. (5p)
-
-```{r}
+## ---------------------------------------------------------------------------------------------
 lake = read.csv("lakesurvey.csv", header = T, sep = ' ')
 str(lake)
-```
-```{r Data-Exploration, warning=FALSE, fig.width=10, fig.height=10}
+
+## ----Data-Exploration, warning=FALSE, fig.width=10, fig.height=10-----------------------------
 library(ggcorrplot)
 
 corr = round(cor(lake), 1)
 ggcorrplot(corr, outline.color = "white",lab = T,lab_size =4)
-```
 
-**Best Subset Selection**
-```{r Best-Subset-Selection, cache=T, message=F}
+
+## ----Best-Subset-Selection, cache=T, message=F------------------------------------------------
 library(ISLR)
 library(leaps)
 # Fit
@@ -42,9 +26,9 @@ as.data.frame(res.sum$outmat)
 
 plot(regfit.models, scale='Cp')
 plot(regfit.models, scale='bic')
-```
 
-```{r Best-Subset-Selection-Results, echo=FALSE, results='hold', message=F}
+
+## ----Best-Subset-Selection-Results, echo=FALSE, results='hold', message=F---------------------
 regfit.sum.min.cp = which.min(res.sum$cp)
 regfit.sum.min.cp.value = min(res.sum$cp)
 cat(sprintf('Model with best Cp (%.2f) model: %s \n', regfit.sum.min.cp.value, regfit.sum.min.cp))
@@ -60,18 +44,17 @@ cat(sprintf('Model with best BIC (%.2f) model: %s \n', regfit.sum.min.bic.value,
 cat(sprintf('Model: pH ~ %s\n\n',
             paste(names(which(res.sum$which[regfit.sum.min.bic, ] == TRUE)),
                   collapse = ' + ')))
-```
 
-**Lasso**
-```{r, echo = FALSE, echo=F, message=F}
+
+## ---- echo = FALSE, echo=F, message=F---------------------------------------------------------
 library(caret)
 library(pls)
 library(caTools)
 library(MASS)
 library(tidyverse)
-```
 
-```{r Lasso, warning=FALSE, results='hold', cache=T, message=F}
+
+## ----Lasso, warning=FALSE, results='hold', cache=T, message=F---------------------------------
 parameters <- c(seq(0.01, 0.1, by = 0.01))
 
 model_lasso <- train(
@@ -81,8 +64,8 @@ model_lasso <- train(
   tuneGrid = expand.grid(alpha = 1,  lambda = parameters),
   metric = 'RMSE'
   )
-```
-```{r Lasso-Results, results='hold', max.print=50}
+
+## ----Lasso-Results, results='hold', max.print=50----------------------------------------------
 plot(model_lasso, main = 'Performance of Lasso')
 
 options(max.print=1000000)
@@ -91,42 +74,31 @@ cat(sprintf('Best Lasso Model'))
 cat(sprintf('Model: pH ~ %s\n\n',
             paste(model_lasso$finalModel$xNames,
                   collapse = ' + ')))
-```
 
-b. Prediction
-In the next task you will investigate the correlations between the predictors. As you can see there are some highly correlated variables. Extract the CV error from the LASSO in a. Find a method that is known to produce low prediction error on correlated data. The method should give at least as good prediction error as the LASSO. Motivate your choice and present details on how you have tuned the method. (5p)
 
-```{r Lasso-MSE}
+## ----Lasso-MSE--------------------------------------------------------------------------------
 # Best Lasso MSE
 lasso_mse = min(model_lasso$results$RMSE ** 2)
 cat(sprintf("\nLasso MSE: %.3f \n\n", lasso_mse))
-```
 
 
-**Using PLS**
-```{r PLS, cache=T, results='hold'}
+## ----PLS, cache=T, results='hold'-------------------------------------------------------------
 model_pls <- train(
   pH~., data = lake, method = "pls",
   scale = TRUE, # scale = TRUE for standardizing the variables to make them comparable.
   trControl = trainControl("LOOCV", number = 500),
   tuneLength = 50
   )
-```
-```{r PLS-Results, results='hold'}
+
+## ----PLS-Results, results='hold'--------------------------------------------------------------
 # Plot model RMSE vs different values of components
 plot(model_pls, main = 'Performance of PLS')
 # minimize the cross-validation error, RMSE
 pls_mse = min(model_pls$results$RMSE ** 2)
 cat(sprintf("\nPLS MSE: %.3f \n\n", pls_mse))
-```
 
-I chose PLS because easy of the implemention, tuning and remembering it's good performance from the exercises. However it didn't increase the performance and the mse remained in one decimal place. Just give reasonable tune length and it finds the best tune. Also this method is not so time consuming.
 
-## Assignment 2. Nonlinear regression
-
-File Concrete_Data_2.xls contains three variables. The Concrete Strength which is a possibly nonlinear function of Age and amount of Cement.
-
-```{r Concrete}
+## ----Concrete---------------------------------------------------------------------------------
 library(readxl)
 concrete<- read_excel("Concrete_Data_2.xls")
 col_names_ = c('Cement', 'Age', 'Strength')
@@ -135,13 +107,9 @@ str(concrete)
 summary(concrete)
 
 anyNA.data.frame(concrete)
-```
 
-a. GAM
-Import the data to R and fit two GAM models (with both Spline and Loess smoothers) using Concrete Strength as response variable, and Age and Cement as predictors. Use leave-one-out-cross-validation as model selection criterion to determine which model fits best. Explain the results and provide plots of the regression functions for the best model. (5p)
 
-**GAM Spline**
-```{r GAM-Spline, cache=TRUE, message=FALSE}
+## ----GAM-Spline, cache=TRUE, message=FALSE----------------------------------------------------
 library(gam)
 library(caret)
 # Build the GAM model based on splines and find best model with LOOCV
@@ -150,20 +118,16 @@ fit_gam_spline <- train(
   scale = FALSE,
   trControl = trainControl("LOOCV", number = 1),
   tuneGrid = expand.grid(df = c(75, 100, 125)))
-```
 
-```{r GAM-spline-Results, results='hold'}
+
+## ----GAM-spline-Results, results='hold'-------------------------------------------------------
 fit_gam_spline
 par(mfrow = c(1, 2))
 plot(fit_gam_spline$finalModel)
 cat(sprintf('GAM Split best model RMSE: %.4g', min(fit_gam_spline$results$RMSE)))
-```
-
-Best model is reached when degrees of freedom is 100. This gives us RMSE of 8.45. 
 
 
-**GAM Loess**
-```{r GAM-Loess, warning=F, cache=TRUE, warning=FALSE}
+## ----GAM-Loess, warning=F, cache=TRUE, warning=FALSE------------------------------------------
 # Build the GAM model based on splines and find best model with LOOCV
 library(gam)
 library(dplyr)
@@ -176,28 +140,23 @@ seq_lenght = 6
 #  trControl = trainControl("LOOCV", number = 1),
 #  tuneGrid = expand.grid(span = seq(0.1, 0.6, length = seq_lenght),
 #                         degree = c(rep(1,seq_lenght))))
-```
-```{r GAM-Loess-Results, results='hold'}
+
+## ----GAM-Loess-Results, results='hold'--------------------------------------------------------
 #fit_gam_loess
 #par(mfrow = c(1,2))
 #plot(fit_gam_loess$finalModel)
 #cat(sprintf('GAM Loess best model RMSE: %.4g', min(fit_gam_loess$results$RMSE)))
-```
 
-I couldn't run this. Probably enviroment error?
 
-b. Thin-plate spline
-Fit a thin-plate spline model to the Concrete data using the same response and predictors as in a. Provide model results and a contour fit plot of the best fitting model. What is the methodological difference compared to a. and how did you tune the model? (5p)
-
-```{r TPS, cache=F, message=FALSE, results='hold'}
+## ----TPS, cache=F, message=FALSE, results='hold'----------------------------------------------
 library(fields)
 
 concrete_x = subset(concrete, select = -c(Strength))
 concrete_y = concrete$Strength
 
 tpsfit <- Tps(concrete_x, concrete_y, scale.type="unscaled", GCV = TRUE)
-```
-```{r TPS-results}
+
+## ----TPS-results------------------------------------------------------------------------------
 summary(tpsfit)
 par(mfrow = c(2,2))
 plot(tpsfit, main = 'Tps diagnostics')
@@ -208,29 +167,17 @@ surface(tpsfit, main = 'GCV surface of the Tps')
 look = predict(tpsfit)
 tps_mse = sqrt(mean((concrete_y - look) ** 2))
 cat(sprintf("TPS MSE: %.3f", tps_mse))
-```
 
 
-The main difference is that general additive models allow non-linear functions compared to splines. Polynomials are very restricted form of a curve even when they are form of a plane. Overall GMA models fits 'better' to shape of the data where spline models even thin-plate are limited to form of the polynomials. 
-
-## Assignment 3. Classification
-
-The file ‘olives.csv’ contains data about the content of fatty acids in samples of olive oil from three regions and nine different areas in Italy.
-
-```{r 3-data}
+## ----3-data-----------------------------------------------------------------------------------
 olive = read.csv('olive.csv', header = T)
 olive$Region = as.factor(olive$Region)
 olive_sub = subset(olive, select = -c(Area, Sample))
 str(olive_sub)
 summary(olive_sub)
-```
 
 
-**a. Linear Discriminant Analysis**
-
-Load the data and check for missing values and correlated predictors. Delete the Sample and Area variables. Scale the numeric variables. Divide the data randomly into 70% train and 30% test using a seed of 3. Make a linear discriminant analysis (LDA) using the lda() function. Perform predictions based on the test data and calculate the accuracy. Present a plot of the classification result that clearly shows how the test predictions relate to the training predictions including decision boundaries. (5p) 
-
-```{r 3-Corr-Na, cache=T, warning=FALSE, fig.width=10, fig.height=10, message=F, results='hold'}
+## ----3-Corr-Na, cache=T, warning=FALSE, fig.width=10, fig.height=10, message=F, results='hold'----
 library(ggcorrplot)
 
 # Scaling
@@ -249,9 +196,9 @@ train <- olive_sub[train_ind, ]
 test <- olive_sub[-train_ind, ]
 
 summary(olive_sub)
-```
 
-```{r LDA, cache=T}
+
+## ----LDA, cache=T-----------------------------------------------------------------------------
 library(MASS)
 olive_lda = lda(Region~., data = train)
 lda_predict = predict(olive_lda, test)
@@ -272,15 +219,9 @@ plot(olive_lda, panel = function(x, y, ...) { points(x, y, ...) },
 
 contour(x = p.x, y = p.y, z = matrix(as.numeric(lda_predict$class), nrow = n, ncol = n), 
         levels = c(1, 2, 3), add = TRUE, drawlabels = FALSE)
-```
 
 
-
-b. Random Forest
-Use the same data as in a. and implement a Random Forest analysis via the caret package. Use LOOCV for tuning of the mtry parameter with values c(3,5,7) while you fix the number of trees to 500 and node size to 3. Present a Variable Importance plot and the test accuracy that should be calculated on the test data. Compare with a. and discuss your results. (5p)
-
-
-```{r Random-Forest, cache=T}
+## ----Random-Forest, cache=T-------------------------------------------------------------------
 library(caret)
 library(randomForest)
 
@@ -298,8 +239,8 @@ rf_model <- train(Region~.,
                   tuneGrid=tunegrid,
                   trControl=control,
                   nodesize=3)
-```
-```{r LDA-result, results='hold'}
+
+## ----LDA-result, results='hold'---------------------------------------------------------------
 rf_model$finalModel$importance
 plot(rf_model)
 
@@ -307,6 +248,4 @@ rf_predict = predict(rf_model, test)
 
 rf_acc = sum(test$Region == rf_predict)/length(test$Region) * 100
 cat(sprintf("\nLDA Acc (on test data): %.2f\n\n", rf_acc))
-```
 
-RF perfoms with accuracy of 100% and the best model is when mtry has value of 3. LDA accuracy is 98.84 % which is top notch also. LDA is very quick to calculate and much simpler method overall. For example if you are building classification APIs and you need to update your models time to time when you are inquiring new data LDA model can be updated almost instantly but random forest needs back end calculations specially with big datasets. If you are not time critical you should use random forest based on this exercise.
