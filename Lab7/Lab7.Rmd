@@ -1,0 +1,176 @@
+---
+title: "Lab7"
+author: "Tristen Tooming"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 1: Dimension reduction.
+
+The text file ‘fluorescence.csv’ contains data regarding light reflection from a total of 30 surfaces treated with zinc, rhodamine, manganese etc. For each surface, measurements are undertaken for light representing 146 different wavelengths (channels), i.e., the data have 146 dimensions. However, the measured values for adjacent channels are strongly correlated, implying that the effective dimension of the measured values is much smaller than 146.
+
+Your task is to perform principal components analysis of the given data and to interpret the results of that analysis. For the sake of simplicity, the channels for which there was no variation in the light reflection have been omitted.
+
+**Import and plot the data set**
+Import the data into R. Inspect the light reflection data (all columns except the first “sample”) to be analysed by making a parallel coordinate plot (lineplot) in R of the data using the matplot() function. The samples should be on the x-axis.
+
+
+```{r 1-Data}
+library(dplyr)
+fluor = read.csv("fluorescence.csv", header = T)
+fluor_sub = (fluor %>% select(-Sample))
+str(fluor)
+x = 1:30
+matplot(x = x, y=fluor_sub, type = 'l')
+```
+
+**Extract principal components**
+
+Perform PCA using the prcomp() function (centered but not scaled). Examine the effective dimension of the given data, i.e., how many principal components that are needed to explain most of the variation in the data based on a screeplot and sources of variation.
+
+
+```{r PCA-centered}
+pca_centered = prcomp(fluor_sub, center = T, scale. = F)
+
+plot(pca_centered, type = 'l')
+```
+**Draw a biplot**
+
+Create a biplot where the Sample factor should be used for grouping. Can you identify distinct groups of objects in this new coordinate system? Are any channels particularly important in the separation?
+
+```{r Biplot}
+library(ggplot2)
+library(ggfortify)
+
+d <- autoplot(pca_centered, data=fluor, 
+  colour="Sample", 
+  loadings.label=TRUE, 
+  loadings.label.size=3,
+  loadings.label.colour = "black",
+  loadings=TRUE,loadings.colour = 
+  "black", scale = 1)+
+  scale_colour_manual(values=
+  c("forestgreen","red","blue", 'pink', 'black')) +
+  scale_fill_manual(values=
+  c("forestgreen","red","blue", 'pink', 'black')) +
+  scale_shape_manual(values=
+  c(25,22,23,21,20))+
+  theme_bw()
+
+d
+```
+
+**Perform kernel PCA**
+
+Perform kernel PCA using the kpca() function with the RBF kernel by tuning sigma. Plot the two first principal components and label the samples with different colors. Are there any differences compared to the linear PCA result?
+
+```{r KPCA, results='hold'}
+library(kernlab)
+sigma = c(1, 3, 10)
+kpca_fluor_1 = kpca(~.,
+                  data=fluor_sub,
+                  kernel="rbfdot",
+                  kpar=list(sigma=sigma[1]),features=2)
+
+kpca_fluor_3 = kpca(~.,
+                  data=fluor_sub,
+                  kernel="rbfdot",
+                  kpar=list(sigma=sigma[2]),features=2)
+
+kpca_fluor_10 = kpca(~.,
+                  data=fluor_sub,
+                  kernel="rbfdot",
+                  kpar=list(sigma=sigma[3]),features=2)
+
+par(mfrow=c(1,3))
+plot(pcv(kpca_fluor_1),
+     col = as.integer(as.factor(fluor$Sample)),
+     xlab="PC1",
+     ylab="PC2",
+     main="KPCA RBF kernel 1")
+
+plot(pcv(kpca_fluor_3),
+     col = as.integer(as.factor(fluor$Sample)),
+     xlab="PC1",
+     ylab="PC2",
+     main="KPCA RBF kernel 3")
+
+plot(pcv(kpca_fluor_10),
+     col = as.integer(as.factor(fluor$Sample)),
+     xlab="PC1",
+     ylab="PC2",
+     main="KPCA RBF kernel 10")
+
+plot(pcv(kpca_fluor_1)[,1],
+     col = as.integer(as.factor(fluor$Sample)),
+     ylab="PC1",
+     xlab=expression(Observation~italic(i)),
+     main="KPCA RBF kernel 1")
+
+plot(pcv(kpca_fluor_3)[,1],
+     col = as.integer(as.factor(fluor$Sample)),
+     ylab="PC1",
+     xlab=expression(Observation~italic(i)),
+     main="KPCA RBF kernel 3")
+
+plot(pcv(kpca_fluor_10)[,1],
+     col = as.integer(as.factor(fluor$Sample)),
+     ylab="PC1",
+     xlab=expression(Observation~italic(i)),
+     main="KPCA RBF kernel 10")
+
+```
+
+## Assignment 2: Clustering
+
+The seeds data set http://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt (also used in Lab 1_2) contains measurements of seven geometric parameters of wheat kernels from three different varieties. Your task is to investigate if K-means clustering with the Gap statistic and the model based mixture clustering using the mclust() library supports the classification into three distinct varieties. Provide evidence for the number of clusters and which measurements that cluster together, as well as how the clustering corresponds to the real classification. Note that the last variable contains the variety information and should not be included in the clustering, and make sure that you standardize the data.
+
+```{r DATA}
+library(dplyr)
+# Reading data
+url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt'
+wheat_seeds = read.table(url)
+# Factoring and Naming variables
+column_names = c('Area_A',
+'Åerimeter_P',
+'Compactness_C',
+'Length_of_kernel',
+'Width_of_kernel',
+'Asymmetry_coefficient',
+'Length_of_kernel_groove',
+'Variety')
+colnames(wheat_seeds) = column_names
+variety_names = c()
+wheat_seeds$Variety = as.factor(wheat_seeds$Variety)
+
+wheat_seeds_sub = scale((wheat_seeds %>% select(-Variety)))
+summary(wheat_seeds_sub)
+```
+
+```{r K-means}
+library(cluster)
+
+wheat_k_gap <- clusGap(wheat_seeds_sub, FUN = kmeans,K.max = 10, B = 250)
+wheat_k_gap
+what_kmeans = kmeans(wheat_seeds_sub, 3, nstart = 20)
+
+what_kmeans
+```
+
+```{r Model-Based-Mixture-Clust, cache=T, results='hold'}
+library(mclust)
+
+BIC <- mclustBIC(wheat_seeds_sub) # Find the best number of clusters based on BIC
+plot(BIC)
+summary(BIC)
+
+mod1 <- Mclust(wheat_seeds_sub, x = BIC) # EM algorithm based clustering
+summary(mod1)
+
+#mod1$z # Probability that obs. i in the test data belongs to the kth class.
+```
+
